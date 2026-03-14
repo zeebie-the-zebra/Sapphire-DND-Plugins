@@ -1,0 +1,11 @@
+{
+  "name": "dnd-npcs",
+  "version": "1.0.0",
+  "description": "D&D NPC generator and persistent NPC roster with personality traits, appearance, and motivations",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 55,
+  "default_enabled": true,
+  "capabilities": {
+    "tools": ["tools/npc_tool.py"]
+  }
+}

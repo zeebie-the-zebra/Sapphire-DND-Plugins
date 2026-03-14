@@ -1,0 +1,14 @@
+{
+  "name": "dnd-time",
+  "version": "1.0.0",
+  "description": "Persistent time tracking for D&D sessions — tracks time of day, game clock, and day count. Injected every turn so the DM never forgets whether it's morning or night.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 40,
+  "default_enabled": true,
+  "capabilities": {
+    "hooks": {
+      "prompt_inject": "hooks/inject.py"
+    },
+    "tools": ["tools/time_tool.py"]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "dnd-levelup",
+  "version": "1.0.0",
+  "description": "XP tracking and level-up guidance. Accumulates XP per character, detects level-up readiness, and walks through exactly what that class gets — features, spell slots, ASI/feat choices. Writes back to character sheets.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 28,
+  "default_enabled": true,
+  "capabilities": {
+    "hooks": {
+      "prompt_inject": "hooks/inject.py"
+    },
+    "tools": ["tools/levelup_tool.py"]
+  }
+}

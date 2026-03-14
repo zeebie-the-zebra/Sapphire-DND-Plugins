@@ -1,0 +1,14 @@
+{
+  "name": "dnd-toggle",
+  "version": "1.0.0",
+  "description": "Single-phrase D&D mode toggle. Say 'game on' to activate all D&D tools and Remmi persona. Say 'game off' to return to normal chat. No UI needed.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 5,
+  "default_enabled": true,
+  "capabilities": {
+    "hooks": {
+      "pre_chat": "hooks/toggle.py",
+      "prompt_inject": "hooks/inject.py"
+    }
+  }
+}

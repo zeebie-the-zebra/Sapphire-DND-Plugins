@@ -1,0 +1,14 @@
+{
+  "name": "dnd-facts",
+  "version": "1.0.0",
+  "description": "World facts registry — stores granular named details (NPCs appearances, passwords, place descriptions, secrets) and injects them into every prompt so Remmi never contradicts established details.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 30,
+  "default_enabled": true,
+  "capabilities": {
+    "hooks": {
+      "prompt_inject": "hooks/inject.py"
+    },
+    "tools": ["tools/facts_tool.py"]
+  }
+}

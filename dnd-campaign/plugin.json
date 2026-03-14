@@ -1,0 +1,14 @@
+{
+  "name": "dnd-campaign",
+  "version": "1.0.0",
+  "description": "D&D campaign manager — injects world state into every prompt so the DM always has context",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 40,
+  "default_enabled": true,
+  "capabilities": {
+    "hooks": {
+      "prompt_inject": "hooks/context.py"
+    },
+    "tools": ["tools/campaign_tool.py"]
+  }
+}

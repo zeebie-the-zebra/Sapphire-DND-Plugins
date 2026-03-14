@@ -1,0 +1,54 @@
+{
+  "name": "dnd-voice",
+  "version": "1.0.0",
+  "description": "D&D voice command macros — pause, resume, recap, roll, and more without involving the LLM",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 10,
+  "default_enabled": true,
+  "capabilities": {
+    "voice_commands": [
+      {
+        "triggers": ["pause game", "pause the game", "out of character", "ooc"],
+        "match": "exact",
+        "bypass_llm": true,
+        "handler": "hooks/commands.py",
+        "description": "Pause the game and switch to out-of-character mode"
+      },
+      {
+        "triggers": ["resume game", "resume the game", "in character", "back to the game", "resume"],
+        "match": "exact",
+        "bypass_llm": true,
+        "handler": "hooks/commands.py",
+        "description": "Resume the game in DM character"
+      },
+      {
+        "triggers": ["recap", "what happened", "session recap", "story so far"],
+        "match": "contains",
+        "bypass_llm": false,
+        "handler": "hooks/commands.py",
+        "description": "Ask the DM for a story recap (goes through LLM)"
+      },
+      {
+        "triggers": ["save game", "save session", "save progress"],
+        "match": "exact",
+        "bypass_llm": true,
+        "handler": "hooks/commands.py",
+        "description": "Save a session checkpoint"
+      },
+      {
+        "triggers": ["party status", "show party", "check party", "party stats"],
+        "match": "exact",
+        "bypass_llm": true,
+        "handler": "hooks/commands.py",
+        "description": "Show quick party HP and condition status"
+      },
+      {
+        "triggers": ["end session", "end the session", "session over"],
+        "match": "exact",
+        "bypass_llm": true,
+        "handler": "hooks/commands.py",
+        "description": "End the current session and log a summary"
+      }
+    ]
+  }
+}

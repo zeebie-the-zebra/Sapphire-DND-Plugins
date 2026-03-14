@@ -1,0 +1,11 @@
+{
+  "name": "dnd-rules",
+  "version": "1.0.0",
+  "description": "Quick reference for D&D 5e rules, conditions, actions, and mechanics. Prevents small models from hallucinating rule details mid-session.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 45,
+  "default_enabled": true,
+  "capabilities": {
+    "tools": ["tools/rules_tool.py"]
+  }
+}

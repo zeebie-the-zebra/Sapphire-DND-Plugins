@@ -1,0 +1,15 @@
+private_key.pem
+public_key.pem
+generate_keypair.py
+sign_plugins.py
+verify_plugin.py
+*.md
+*.pyc
+__pycache__/
+dnd-active-conditions/
+dnd-context-budget/
+dnd-npc-relations/
+dnd-random-tables/
+dnd-shop/
+dnd-status/
+dnd-weather/
