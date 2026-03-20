@@ -2,6 +2,7 @@ private_key.pem
 public_key.pem
 generate_keypair.py
 sign_plugins.py
+verify_plugin.py
 *.md
 !README.md
 !System_Prompt.md
