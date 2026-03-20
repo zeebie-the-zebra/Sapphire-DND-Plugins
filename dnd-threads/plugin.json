@@ -1,7 +1,7 @@
 {
   "name": "dnd-threads",
-  "version": "1.0.0",
-  "description": "Open narrative threads tracker — stores loose ends, consequences, and unresolved story beats so Remmi surfaces them at the right moment and nothing falls through the cracks.",
+  "version": "1.0.1",
+  "description": "dnd-threads. Open narrative threads tracker — stores loose ends, consequences, and unresolved story beats so Remmi surfaces them at the right moment and nothing falls through the cracks.",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 38,
   "default_enabled": true,

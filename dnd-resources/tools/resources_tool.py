@@ -236,18 +236,47 @@ TOOLS = [
     }
 ]
 
+DEFAULT_CAMPAIGN_ID = "default"
+
+
+def _get_campaign_id(config=None) -> str:
+    from core.plugin_loader import plugin_loader
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        return campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+    except Exception:
+        return DEFAULT_CAMPAIGN_ID
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-resources")
 
 
-def _load():
-    return _get_state().get("resources") or {}
+def _migrate_if_needed(campaign_id: str):
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+    if state.get(migration_key):
+        return
+    legacy = state.get("resources")
+    if legacy:
+        state.save(f"resources:{campaign_id}", legacy)
+        state.save(migration_key, True)
 
 
-def _save(data):
-    _get_state().save("resources", data)
+def _load(config=None):
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+    _migrate_if_needed(campaign_id)
+    campaign_resources = state.get(f"resources:{campaign_id}")
+    if campaign_resources:
+        return campaign_resources
+    return state.get("resources") or {}
+
+
+def _save(data, config=None):
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"resources:{campaign_id}", data)
 
 
 def _find_resource(char_resources, resource_name):
@@ -294,7 +323,7 @@ def execute(function_name, arguments, config):
             return "Error: name and class_name required.", False
 
         defaults   = _default_resources(class_name, level)
-        data       = _load()
+        data       = _load(config)
         char_res   = data.get(name, {})
         new_res    = []
 

@@ -1,0 +1,16 @@
+{
+  "name": "dnd-weather",
+  "version": "1.0.1",
+  "description": "dnd-weather. Persistent weather tracker with multi-location support and forecasting. Advances weather with in-game time, injects current conditions into prompts with mechanical impacts. Supports manual overrides, climate presets, and travel forecasts.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 600,
+  "capabilities": {
+    "tools": [
+      "tools/weather.py"
+    ],
+    "hooks": {
+      "prompt_inject": "hooks/prompt_inject.py",
+      "post_execute": "hooks/post_execute.py"
+    }
+  }
+}

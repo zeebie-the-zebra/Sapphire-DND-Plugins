@@ -1,7 +1,7 @@
 {
   "name": "dnd-recap",
-  "version": "1.1.0",
-  "description": "Rolling session summary — compresses old conversation history into dense narrative summaries injected at the top of every prompt. Solves the 'lost in the middle' attention problem for local LLMs.",
+  "version": "1.0.1",
+  "description": "dnd-recap. Rolling session summary — compresses old conversation history into dense narrative summaries injected at the top of every prompt. Solves the 'lost in the middle' attention problem for local LLMs.",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 25,
   "default_enabled": true,

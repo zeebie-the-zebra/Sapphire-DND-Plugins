@@ -21,6 +21,10 @@ When ON:
   - Remmi persona and tools are fully active
 """
 
+import logging
+
+logger = logging.getLogger("dnd-toggle")
+
 ON_PHRASES = {
     "game on", "start game", "dnd on", "d&d on", "dm mode on",
     "remmi on", "start session", "begin session", "start dnd",
@@ -40,13 +44,23 @@ def _get_state():
 
 
 def pre_chat(event):
-    text = (event.input or "").strip().lower()
+    # Defensive: ensure input is a string
+    raw_input = event.input
+    if not isinstance(raw_input, str):
+        logger.warning(f"[dnd-toggle] pre_chat received non-string input: {type(raw_input)!r} = {raw_input!r}")
+        raw_input = str(raw_input) if raw_input is not None else ""
 
-    # Strip punctuation for matching
+    text = raw_input.strip().lower()
     clean = text.rstrip("!.,?").strip()
 
+    logger.info(f"[dnd-toggle] pre_chat firing: raw={raw_input!r}, text={text!r}, clean={clean!r}")
+
     if clean in ON_PHRASES:
-        _get_state().save("dnd_active", True)
+        logger.info(f"[dnd-toggle] MATCH ON_PHRASES: {clean!r}")
+        try:
+            _get_state().save("dnd_active", True)
+        except Exception as e:
+            logger.error(f"[dnd-toggle] Failed to save state: {e}")
         event.skip_llm = True
         event.ephemeral = True
         event.response = (
@@ -57,7 +71,11 @@ def pre_chat(event):
         return
 
     if clean in OFF_PHRASES:
-        _get_state().save("dnd_active", False)
+        logger.info(f"[dnd-toggle] MATCH OFF_PHRASES: {clean!r}")
+        try:
+            _get_state().save("dnd_active", False)
+        except Exception as e:
+            logger.error(f"[dnd-toggle] Failed to save state: {e}")
         event.skip_llm = True
         event.ephemeral = True
         event.response = (
@@ -66,3 +84,5 @@ def pre_chat(event):
         )
         event.stop_propagation = True
         return
+
+    logger.info(f"[dnd-toggle] No phrase match — letting message pass through")

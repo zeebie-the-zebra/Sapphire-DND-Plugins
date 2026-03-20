@@ -214,17 +214,61 @@ TOOLS = [
 ]
 
 
+DEFAULT_CAMPAIGN_ID = "default"
+
+
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-scene")
 
 
-def _load():
-    return _get_state().get("scene") or {"current": {}, "library": {}}
+def _get_campaign_id(config=None) -> str:
+    """Get current campaign ID, defaulting to 'default' for backward compatibility."""
+    from core.plugin_loader import plugin_loader
+
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        campaign_id = campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+        if campaign_id:
+            return campaign_id
+    except Exception:
+        pass
+
+    return DEFAULT_CAMPAIGN_ID
 
 
-def _save(data):
-    _get_state().save("scene", data)
+def _migrate_if_needed(campaign_id: str):
+    """Migrate legacy scene data to campaign scope if needed."""
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+
+    if state.get(migration_key):
+        return
+
+    legacy = state.get("scene")
+    if legacy:
+        state.save(f"scene:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load(config=None):
+    """Load scene data for the current campaign."""
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+
+    _migrate_if_needed(campaign_id)
+
+    campaign_scene = state.get(f"scene:{campaign_id}")
+    if campaign_scene:
+        return campaign_scene
+
+    return state.get("scene") or {"current": {}, "library": {}}
+
+
+def _save(data, config=None):
+    """Save scene data to the current campaign's storage."""
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"scene:{campaign_id}", data)
 
 
 def _loc_key(name):
@@ -271,6 +315,8 @@ def _scene_summary(data):
 
 
 def execute(function_name, arguments, config):
+    # Campaign-scoped helpers
+    data = _load(config)
 
     if function_name == "scene_move":
         name    = arguments.get("name", "").strip()
@@ -281,7 +327,7 @@ def execute(function_name, arguments, config):
         if not name:
             return "Error: location name is required.", False
 
-        data    = _load()
+        data = _load(config)
         library = data.get("library", {})
         key     = _loc_key(name)
         known   = key in library
@@ -295,7 +341,7 @@ def execute(function_name, arguments, config):
             "mood": mood, "lighting": "", "visit_notes": "", "is_new": not known
         }
         data["library"] = library
-        _save(data)
+        _save(data, config)
 
         if known:
             visits = library[key]["visit_count"]
@@ -325,7 +371,7 @@ def execute(function_name, arguments, config):
         if not description:
             return "Error: description is required.", False
 
-        data    = _load()
+        data = _load(config)
         current = data.get("current", {})
 
         if not current.get("name"):
@@ -348,7 +394,7 @@ def execute(function_name, arguments, config):
         current["is_new"] = False
         data["library"]   = library
         data["current"]   = current
-        _save(data)
+        _save(data, config)
 
         return (
             f"'{current['name']}' saved to location library.\n"
@@ -357,7 +403,7 @@ def execute(function_name, arguments, config):
         ), True
 
     elif function_name == "scene_get":
-        return _scene_summary(_load()), True
+        return _scene_summary(_load(config)), True
 
     elif function_name == "scene_add_person":
         name = arguments.get("name", "").strip()
@@ -365,7 +411,7 @@ def execute(function_name, arguments, config):
         if not name:
             return "Error: name is required.", False
 
-        data    = _load()
+        data = _load(config)
         current = data.get("current", {})
         if not current:
             return "No scene set. Call scene_move() first.", False
@@ -378,7 +424,7 @@ def execute(function_name, arguments, config):
         present.append(entry)
         current["present"] = present
         data["current"]    = current
-        _save(data)
+        _save(data, config)
         return f"{entry} added. Present: {', '.join(present)}", True
 
     elif function_name == "scene_remove_person":
@@ -387,7 +433,7 @@ def execute(function_name, arguments, config):
         if not name:
             return "Error: name is required.", False
 
-        data    = _load()
+        data = _load(config)
         current = data.get("current", {})
         if not current:
             return "No scene set.", False
@@ -399,7 +445,7 @@ def execute(function_name, arguments, config):
 
         current["present"] = new_present
         data["current"]    = current
-        _save(data)
+        _save(data, config)
         msg = f"{name} removed" + (f" ({reason})" if reason else "")
         msg += f". Remaining: {', '.join(new_present) if new_present else 'nobody'}"
         return msg, True
@@ -416,14 +462,14 @@ def execute(function_name, arguments, config):
                 f"Per-visit fields: {', '.join(sorted(VISIT_FIELDS))}"
             ), False
 
-        data    = _load()
+        data = _load(config)
         current = data.get("current", {})
         if not current:
             return "No current scene. Call scene_move() first.", False
 
         current[field] = value
         data["current"] = current
-        _save(data)
+        _save(data, config)
         return f"Scene {field} → {value}  (this visit only)", True
 
     elif function_name == "scene_update_location":
@@ -435,7 +481,7 @@ def execute(function_name, arguments, config):
         if field not in LOCATION_FIELDS:
             return f"Invalid field. Use: {', '.join(sorted(LOCATION_FIELDS))}", False
 
-        data    = _load()
+        data = _load(config)
         current = data.get("current", {})
         if not current.get("name"):
             return "No current location. Call scene_move() first.", False
@@ -453,7 +499,7 @@ def execute(function_name, arguments, config):
             library[key].setdefault("change_log", []).append(entry)
 
         data["library"] = library
-        _save(data)
+        _save(data, config)
         return (
             f"PERMANENT change to '{current['name']}':\n"
             f"  {field}: was '{old_val[:60]}'\n"
@@ -463,7 +509,7 @@ def execute(function_name, arguments, config):
         ), True
 
     elif function_name == "scene_list_locations":
-        data        = _load()
+        data = _load(config)
         library     = data.get("library", {})
         current_key = _loc_key(data.get("current", {}).get("name", ""))
 
@@ -493,7 +539,7 @@ def execute(function_name, arguments, config):
         if field not in LOCATION_FIELDS:
             return f"Invalid field. Use: {', '.join(sorted(LOCATION_FIELDS))}", False
 
-        data    = _load()
+        data = _load(config)
         library = data.get("library", {})
         key     = _loc_key(name)
 
@@ -507,7 +553,7 @@ def execute(function_name, arguments, config):
         library[key].setdefault("change_log", []).append(entry)
 
         data["library"] = library
-        _save(data)
+        _save(data, config)
         return (
             f"Edited '{name}':\n"
             f"  {field}: was '{old_val[:60]}'\n"
@@ -529,7 +575,7 @@ def execute(function_name, arguments, config):
                 "Ask the user to confirm before passing confirm=true."
             ), False
 
-        data    = _load()
+        data = _load(config)
         library = data.get("library", {})
         key     = _loc_key(name)
 
@@ -543,7 +589,7 @@ def execute(function_name, arguments, config):
         if _loc_key(current.get("name", "")) == key:
             current["is_new"] = True
 
-        _save(data)
+        _save(data, config)
         return (
             f"Deleted '{name}' from library.\n"
             "The party can still travel there but it will require scene_set() to save again."

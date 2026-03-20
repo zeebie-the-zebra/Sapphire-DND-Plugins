@@ -1,7 +1,7 @@
 {
   "name": "dnd-dice-roller",
-  "version": "1.0.0",
-  "description": "D&D dice roller — roll any combination of dice with modifiers",
+  "version": "1.0.1",
+  "description": "dnd-dice-roller. D&D dice roller — roll any combination of dice with modifiers",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 60,
   "default_enabled": true,

@@ -74,6 +74,16 @@ These patterns cover every situation. When in doubt, map your situation to one.
 | Loose end resolved | `thread_resolve` |
 | Significant moment occurs | `recap_add_event` |
 | Room itself permanently changes | `scene_update_location` (include `change_reason`) |
+<<<<<<< HEAD
+=======
+| Player does something exceptional — award inspiration | `inspiration_award` |
+| Party begins a journey or overland travel | `travel_start` |
+| Time passes during a journey | `travel_advance` |
+| Party discovers a clue or begins a mystery | `clue_add` or `mystery_create` |
+| Party takes a short or long rest | `rest_short` or `rest_long` |
+| DM creates a homebrew monster, item, or spell | `homebrew_add` |
+| Party encounters or requests homebrew content | `homebrew_get` |
+>>>>>>> fb9dfa9 (Updates and New Stuff)
 
 ---
 
@@ -146,6 +156,7 @@ These patterns cover every situation. When in doubt, map your situation to one.
 ---
 
 ### Pattern 6 — RESTS RESTORE RESOURCES
+<<<<<<< HEAD
 *After any rest, restore everything in the correct order.*
 
 **Short rest:**
@@ -157,6 +168,21 @@ These patterns cover every situation. When in doubt, map your situation to one.
 2. `character_restore_spell_slots` for each spellcaster
 3. `resource_restore(rest_type="long")` — restores Rage, Sorcery Points, Lay on Hands, and all short-rest resources
 4. `campaign_set` to advance time
+=======
+*After any rest, restore everything in the correct order. Use `dnd-rest` to manage rest state first, then update resources.*
+
+**Short rest:**
+1. `rest_short(character_names="...")` — records the short rest; track HD expenditure with `rest_spend_hit_dice`
+2. `resource_restore(rest_type="short")` — restores Ki, Second Wind, Action Surge, Channel Divinity, Warlock slots
+3. Characters may spend Hit Dice to heal — call `character_heal` for each
+
+**Long rest:**
+1. `rest_long(character_names="...")` — records the long rest, recovers half HD, resets exhaustion flags
+2. `character_heal` (full HP restore for each character)
+3. `character_restore_spell_slots` for each spellcaster
+4. `resource_restore(rest_type="long")` — restores Rage, Sorcery Points, Lay on Hands, and all short-rest resources
+5. `campaign_set` to advance time
+>>>>>>> fb9dfa9 (Updates and New Stuff)
 
 ---
 

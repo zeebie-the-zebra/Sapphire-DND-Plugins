@@ -80,20 +80,67 @@ TOOLS = [
     }
 ]
 
+DEFAULT_CAMPAIGN_ID = "default"
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-recap")
 
 
-def _load():
-    return _get_state().get("recap") or {
+def _get_campaign_id(config=None) -> str:
+    """Get current campaign ID, defaulting to 'default' for backward compatibility."""
+    from core.plugin_loader import plugin_loader
+
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        campaign_id = campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+        if campaign_id:
+            return campaign_id
+    except Exception:
+        pass
+
+    return DEFAULT_CAMPAIGN_ID
+
+
+def _migrate_if_needed(campaign_id: str):
+    """Migrate legacy recap data to campaign scope if needed."""
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+
+    if state.get(migration_key):
+        return
+
+    # Check for legacy data
+    legacy = state.get("recap")
+    if legacy:
+        state.save(f"recap:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load(config=None):
+    """Load recap for the current campaign."""
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+
+    # Migrate legacy data if needed
+    _migrate_if_needed(campaign_id)
+
+    # Try campaign-scoped data first
+    campaign_recap = state.get(f"recap:{campaign_id}")
+    if campaign_recap:
+        return campaign_recap
+
+    # Fall back to legacy data for backward compatibility
+    return state.get("recap") or {
         "summaries": [], "raw_events": [], "last_session": None
     }
 
 
-def _save(data):
-    _get_state().save("recap", data)
+def _save(data, config=None):
+    """Save recap to the current campaign's storage."""
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"recap:{campaign_id}", data)
 
 
 def _compress_simple(events):
@@ -117,15 +164,22 @@ def _maybe_compress(data):
 
 def execute(function_name, arguments, config):
 
+    # Helper to get campaign-scoped data
+    def load():
+        return _load(config)
+
+    def save(data):
+        _save(data, config)
+
     if function_name == "recap_add_event":
         event_text = arguments.get("event", "").strip()
         if not event_text:
             return "Error: event text is required.", False
 
-        data = _load()
+        data = load()
         data.setdefault("raw_events", []).append(event_text)
         data = _maybe_compress(data)
-        _save(data)
+        save(data)
         return (
             f"Event logged. "
             f"({len(data['raw_events'])} recent, "
@@ -155,7 +209,7 @@ def execute(function_name, arguments, config):
         return ("\n".join(lines) if lines else "No session history yet."), True
 
     elif function_name == "recap_compress":
-        data = _load()
+        data = load()
         raw  = data.get("raw_events", [])
 
         if len(raw) <= KEEP_RAW:
@@ -167,7 +221,7 @@ def execute(function_name, arguments, config):
 
         if summary:
             data.setdefault("summaries", []).append(summary)
-            _save(data)
+            save(data)
             return f"Compressed {len(to_compress)} events:\n{summary}", True
         return "Compression produced no output.", False
 
@@ -176,16 +230,16 @@ def execute(function_name, arguments, config):
         all_events = list(data.get("summaries", [])) + list(data.get("raw_events", []))
 
         if not all_events:
-            _save({"summaries": [], "raw_events": [], "last_session": None})
+            save({"summaries": [], "raw_events": [], "last_session": None})
             return "New session started. (No previous events to archive.)", True
 
         full_summary = _compress_simple(all_events)
-        _save({"summaries": [], "raw_events": [], "last_session": full_summary})
+        save({"summaries": [], "raw_events": [], "last_session": full_summary})
         return f"New session started. Archived:\n{full_summary}", True
 
     elif function_name == "recap_summarize":
         """Generate narrative-style summary. Ask the LLM directly - say 'can you summarize what happened?' and the LLM will provide a narrative summary based on the injected recap context."""
-        data = _load()
+        data = load()
         raw = data.get("raw_events", [])
 
         if len(raw) < 2:
@@ -197,7 +251,7 @@ def execute(function_name, arguments, config):
         if summary:
             # Save to summaries for LLM context
             data.setdefault("summaries", []).append(summary)
-            _save(data)
+            save(data)
             return (
                 f"Summary saved to context. You can also ask me directly: "
                 f"'Can you summarize what happened?' and I'll provide a narrative recap based on:\n{summary}"

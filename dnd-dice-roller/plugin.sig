@@ -1,7 +1,7 @@
 {
   "files": {
-    "plugin.json": "sha256:3fb742d913ab60bd2eb14672a79ab86f19dd84ed91e5fb35f0005e794f155293",
+    "plugin.json": "sha256:268f62cb5a0b35fd9032be557a33e9bf077ff4343efea92bb5e68fd09efb1f8b",
     "tools/dice_tool.py": "sha256:e8d122bdda965a69e411c74b2cff2ae47e789a412a891b5d37e4b3f7894b0744"
   },
-  "signature": "ARnLlGmH/6eJPztBeJeudsYQwb436plohxd1RWkWIKknUs6lsakfoDdVaVy2R2d9ir3nvXhLch5OT5r40I8aDQ=="
+  "signature": "G9qv6wQ14CRjcNuuWSHBA4QoUAFA/w+NBWP3LY5riswRtUep70OOoLwGtVHZr9By/0A45czA8CS6W7EUrKOpBA=="
 }

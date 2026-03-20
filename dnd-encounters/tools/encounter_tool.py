@@ -1344,16 +1344,47 @@ TOOLS = [
 ]
 
 
+DEFAULT_CAMPAIGN_ID = "default"
+
+
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-encounters")
 
-def _load_combat():
+
+def _get_campaign_id(config=None) -> str:
+    from core.plugin_loader import plugin_loader
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        return campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+    except Exception:
+        return DEFAULT_CAMPAIGN_ID
+
+
+def _migrate_if_needed(campaign_id: str):
     state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+    if state.get(migration_key):
+        return
+    legacy = state.get("combat")
+    if legacy:
+        state.save(f"combat:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load_combat(config=None):
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+    _migrate_if_needed(campaign_id)
+    campaign_combat = state.get(f"combat:{campaign_id}")
+    if campaign_combat:
+        return campaign_combat
     return state.get("combat") or {}
 
-def _save_combat(combat):
-    _get_state().save("combat", combat)
+
+def _save_combat(combat, config=None):
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"combat:{campaign_id}", combat)
 
 def _xp_difficulty(party_levels, monster_xp):
     totals = [0, 0, 0, 0]
@@ -1467,7 +1498,7 @@ def execute(function_name, arguments, config):
             "round": 1,
             "total_xp": 0,
         }
-        _save_combat(combat)
+        _save_combat(combat, config)
 
         lines = ["⚔️ **Combat Begins! Initiative Order:**"]
         for i, c in enumerate(combatants):
@@ -1478,7 +1509,7 @@ def execute(function_name, arguments, config):
 
     # ── encounter_next_turn ──
     elif function_name == "encounter_next_turn":
-        combat = _load_combat()
+        combat = _load_combat(config)
         if not combat:
             return "No active combat. Use encounter_start_combat first.", False
 
@@ -1496,13 +1527,13 @@ def execute(function_name, arguments, config):
         combat["combatants"] = alive
 
         if not alive:
-            _save_combat({})
+            _save_combat({}, config)
             return "All combatants are down. Combat over.", True
 
         # Check if only players remain
         enemies_alive = [c for c in alive if not c["is_player"] and c["hp"] > 0]
         if not enemies_alive:
-            _save_combat({})
+            _save_combat({}, config)
             return "🎉 **All enemies defeated!** Combat ends.", True
 
         # Advance turn
@@ -1512,7 +1543,7 @@ def execute(function_name, arguments, config):
             combat["round"] += 1
         combat["current_turn"] = next_turn
         combat["combatants"] = alive
-        _save_combat(combat)
+        _save_combat(combat, config)
 
         active = alive[next_turn]
         lines = [f"🎲 **Round {combat['round']} — {active['name']}'s turn**"]
@@ -1526,7 +1557,7 @@ def execute(function_name, arguments, config):
 
     # ── encounter_combat_status ──
     elif function_name == "encounter_combat_status":
-        combat = _load_combat()
+        combat = _load_combat(config)
         if not combat:
             return "No active combat.", True
 
@@ -1543,10 +1574,10 @@ def execute(function_name, arguments, config):
 
     # ── encounter_end_combat ──
     elif function_name == "encounter_end_combat":
-        combat = _load_combat()
+        combat = _load_combat(config)
         if not combat:
             return "No active combat to end.", True
-        _save_combat({})
+        _save_combat({}, config)
         return "✅ Combat ended. Don't forget to award XP and check for loot!", True
 
     # ── encounter_xp_budget ──

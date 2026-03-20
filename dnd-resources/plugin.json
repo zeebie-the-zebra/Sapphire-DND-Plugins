@@ -1,7 +1,7 @@
 {
   "name": "dnd-resources",
-  "version": "1.0.0",
-  "description": "Tracks per-rest class resources: rage, ki, bardic inspiration, channel divinity, wild shape, action surge, second wind, and more. Injected into every prompt so Remmi always knows what's available.",
+  "version": "1.0.1",
+  "description": "dnd-resources. Tracks per-rest class resources: rage, ki, bardic inspiration, channel divinity, wild shape, action surge, second wind, and more. Injected into every prompt so Remmi always knows what's available.",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 32,
   "default_enabled": true,

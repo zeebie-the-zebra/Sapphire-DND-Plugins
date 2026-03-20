@@ -1,0 +1,12 @@
+{
+  "name": "dnd-status",
+  "version": "1.0.1",
+  "description": "dnd-status. Single-call full game state dump. Aggregates party HP/conditions, active combat, current scene, time, active threads, resource warnings, and weather into one response. Use when the model is lost or at the start of a new session to reorient quickly.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 500,
+  "capabilities": {
+    "tools": [
+      "tools/status.py"
+    ]
+  }
+}

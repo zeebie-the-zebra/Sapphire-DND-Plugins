@@ -1,0 +1,14 @@
+{
+  "name": "dnd-mystery",
+  "version": "1.0.1",
+  "description": "dnd-mystery. Clue and evidence tracker for investigative campaigns. Track clues discovered, red herrings, evidence connections, mystery resolution state. Surfaces unresolved clues and flags forgotten leads.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 31,
+  "default_enabled": true,
+  "hooks": {
+    "prompt_inject": "hooks/prompt_inject.py"
+  },
+  "capabilities": {
+    "tools": ["tools/mystery.py"]
+  }
+}

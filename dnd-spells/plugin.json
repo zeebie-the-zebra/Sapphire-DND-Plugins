@@ -1,7 +1,7 @@
 {
   "name": "dnd-spells",
-  "version": "1.0.0",
-  "description": "D&D 5e spell lookup — full database of spells with mechanics, components, and descriptions",
+  "version": "1.0.1",
+  "description": "dnd-spells. D&D 5e spell lookup — full database of spells with mechanics, components, and descriptions",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 55,
   "default_enabled": true,

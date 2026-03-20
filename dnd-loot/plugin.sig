@@ -1,7 +1,7 @@
 {
   "files": {
-    "plugin.json": "sha256:8176080e90c53269e0ac2c61083bb544badf7f71479b025d073fbb4067095a52",
+    "plugin.json": "sha256:b6d922657a7e5aa3debb3fac88d0a36723ef4c670e65f972e77386f2b330d669",
     "tools/loot_tool.py": "sha256:d6bb4e58813dcabd931ec4492a343d70fc8c98c52cbcd851fd3b44ab7fc62bc0"
   },
-  "signature": "Me8Lcv6RylgiZ+zAcW9R2d6dIwUSBVRKKKcLxsiRfLXeJc7LXR+t3LmieyASQLbdrXOOTTsPoxaFIINlbe7fDA=="
+  "signature": "nsXWuhG+LMjyjqq10BhpbSewHfX0zufl8448kY5jB3Sfz2gk/6n6FrzAqVQTrMePiggPSKNFVeO+Rb1+IyUmBg=="
 }

@@ -134,14 +134,55 @@ TOOLS = [
     }
 ]
 
+DEFAULT_CAMPAIGN_ID = "default"
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-time")
 
 
-def _load():
-    return _get_state().get("time") or {
+def _get_campaign_id(config=None) -> str:
+    """Get current campaign ID, defaulting to 'default' for backward compatibility."""
+    from core.plugin_loader import plugin_loader
+
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        campaign_id = campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+        if campaign_id:
+            return campaign_id
+    except Exception:
+        pass
+
+    return DEFAULT_CAMPAIGN_ID
+
+
+def _migrate_if_needed(campaign_id: str):
+    """Migrate legacy time data to campaign scope if needed."""
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+
+    if state.get(migration_key):
+        return
+
+    legacy = state.get("time")
+    if legacy:
+        state.save(f"time:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load(config=None):
+    """Load time data for the current campaign."""
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+
+    _migrate_if_needed(campaign_id)
+
+    campaign_time = state.get(f"time:{campaign_id}")
+    if campaign_time:
+        return campaign_time
+
+    return state.get("time") or {
         "time_of_day": "morning",
         "hour": 8,
         "minute": 0,
@@ -152,9 +193,11 @@ def _load():
     }
 
 
-def _save(data):
+def _save(data, config=None):
+    """Save time data to the current campaign's storage."""
+    campaign_id = _get_campaign_id(config)
     data["last_updated"] = datetime.now().isoformat()
-    _get_state().save("time", data)
+    _get_state().save(f"time:{campaign_id}", data)
 
 
 def _time_period(hour):
@@ -189,7 +232,7 @@ def _format_time(hour, minute):
 
 
 def execute(function_name, arguments, config):
-    data = _load()
+    data = _load(config)
 
     # ── time_set ─────────────────────────────────────────────────────────
     if function_name == "time_set":
@@ -216,7 +259,7 @@ def execute(function_name, arguments, config):
         if day:
             data["day"] = day
 
-        _save(data)
+        _save(data, config)
 
         time_str = _format_time(hour, minute)
         day_str = f"Day {data['day']}"
@@ -254,7 +297,7 @@ def execute(function_name, arguments, config):
         data["time_of_day"] = _time_period(new_hour)
         data["elapsed_minutes"] = data.get("elapsed_minutes", 0) + hours * 60 + minutes
 
-        _save(data)
+        _save(data, config)
 
         time_str = _format_time(new_hour, new_minute)
         elapsed = data.get("elapsed_minutes", 0)
@@ -301,7 +344,7 @@ def execute(function_name, arguments, config):
 
         old_day = data.get("day", 1)
         data["day"] = day
-        _save(data)
+        _save(data, config)
 
         return f"📅 Day set: {old_day} → {day}", True
 
@@ -318,7 +361,7 @@ def execute(function_name, arguments, config):
             "elapsed_minutes": 0,
             "last_updated": datetime.now().isoformat()
         }
-        _save(data)
+        _save(data, config)
 
         return f"🔄 Time reset — {day}, 8:00 AM (morning). Ready for a new session!", True
 

@@ -544,26 +544,56 @@ TOOLS = [
     }
 ]
 
+DEFAULT_CAMPAIGN_ID = "default"
+
+
+def _get_campaign_id(config=None) -> str:
+    from core.plugin_loader import plugin_loader
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        return campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+    except Exception:
+        return DEFAULT_CAMPAIGN_ID
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-levelup")
 
 
-def _load():
-    return _get_state().get("xp_data") or {}
+def _migrate_if_needed(campaign_id: str):
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+    if state.get(migration_key):
+        return
+    legacy = state.get("xp_data")
+    if legacy:
+        state.save(f"xp_data:{campaign_id}", legacy)
+        state.save(migration_key, True)
 
 
-def _save(data):
-    _get_state().save("xp_data", data)
+def _load(config=None):
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+    _migrate_if_needed(campaign_id)
+    campaign_data = state.get(f"xp_data:{campaign_id}")
+    if campaign_data:
+        return campaign_data
+    return state.get("xp_data") or {}
 
 
-def _get_chars():
-    """Load character data from dnd-characters plugin."""
+def _save(data, config=None):
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"xp_data:{campaign_id}", data)
+
+
+def _get_chars(config=None):
+    """Load character data from dnd-characters plugin for current campaign."""
     try:
         from core.plugin_loader import plugin_loader
+        campaign_id = _get_campaign_id(config)
         state = plugin_loader.get_plugin_state("dnd-characters")
-        return state.get("characters") or {}
+        return state.get(f"characters:{campaign_id}") or state.get("characters") or {}
     except Exception:
         return {}
 
@@ -635,8 +665,8 @@ def execute(function_name, arguments, config):
         if xp_award <= 0:
             return "Error: XP must be greater than 0.", False
 
-        xp_data  = _load()
-        chars    = _get_chars()
+        xp_data  = _load(config)
+        chars    = _get_chars(config)
         targets  = []
 
         if name:
@@ -669,7 +699,7 @@ def execute(function_name, arguments, config):
                 level_ups.append((key, old_level, new_level))
                 lines.append(f"  ⬆️  {key} REACHED LEVEL {new_level}! Call levelup_guide(name='{key}', to_level={new_level}) NOW.")
 
-        _save(xp_data)
+        _save(xp_data, config)
 
         if not level_ups and len(targets) > 0:
             # Show progress for first target
@@ -682,12 +712,12 @@ def execute(function_name, arguments, config):
     # ── xp_get ────────────────────────────────────────────────────────────
     elif function_name == "xp_get":
         name  = arguments.get("name", "").strip()
-        chars = _get_chars()
+        chars = _get_chars(config)
         key   = next((k for k in chars if k.lower() == name.lower()), None)
         if not key:
             return f"No character named '{name}'.", False
 
-        xp_data = _load()
+        xp_data = _load(config)
         data    = xp_data.get(key, {"xp": 0})
         xp, level, next_lv, needed, status = _level_status(key, data)
         char    = chars[key]
@@ -731,7 +761,7 @@ def execute(function_name, arguments, config):
         name     = arguments.get("name", "").strip()
         to_level = int(arguments.get("to_level", 0))
 
-        chars = _get_chars()
+        chars = _get_chars(config)
         key   = next((k for k in chars if k.lower() == name.lower()), None)
         if not key:
             return f"No character named '{name}'.", False
@@ -803,7 +833,7 @@ def execute(function_name, arguments, config):
         asi_choice  = arguments.get("asi_choice", "").strip()
         new_features= arguments.get("new_features", "").strip()
 
-        chars = _get_chars()
+        chars = _get_chars(config)
         key   = next((k for k in chars if k.lower() == name.lower()), None)
         if not key:
             return f"No character named '{name}'.", False

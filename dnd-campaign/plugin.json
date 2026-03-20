@@ -1,7 +1,7 @@
 {
   "name": "dnd-campaign",
-  "version": "1.0.0",
-  "description": "D&D campaign manager — injects world state into every prompt so the DM always has context",
+  "version": "1.0.1",
+  "description": "dnd-campaign. The D&D campaign manager — injects world state into every prompt so the DM always has context",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 40,
   "default_enabled": true,

@@ -1,8 +1,8 @@
 {
   "files": {
     "hooks/inject.py": "sha256:e18ac0e6d0871cbd53330f57d21583a1b09d2007defb26f479c158a6f6695a9a",
-    "hooks/toggle.py": "sha256:e6f8f74622ae3c38e688b54baf908f6211e18ab583472f4ffd7b7949984f2798",
-    "plugin.json": "sha256:c931d6a7ef78b27a876026a0925915c8d114d7cb7568f1b106c9c6886558e07b"
+    "hooks/toggle.py": "sha256:794c3c6f098814b1cd8c745dc389181986472505e5ae56e9c426fb117ef9af0b",
+    "plugin.json": "sha256:bcf2738a76258083c81815ec41a9ba4d5f2416c983ef65a28b7b67b5da129840"
   },
-  "signature": "DI+nPgGLpn3smS7JetF3eMfS2T5meQTXIKitga02OxxU9zQs/ewE15B8rWMvkuBxPYWUVLfFQHoQtRyzX5sNBg=="
+  "signature": "A8Q95c9H/mR4Kp9DkFBbUXL7e+67BtLGueawLBfzbddKums8PHZZJjus+6KNSy2gGqe8ZySWpgDSvp/7eJMtCw=="
 }

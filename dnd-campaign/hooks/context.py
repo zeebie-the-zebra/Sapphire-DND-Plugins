@@ -14,7 +14,40 @@ This ensures the DM AI always knows:
 This fires at the prompt_inject hook stage, so the player never sees it
 and it doesn't cost context window on every message — it's part of
 the system prompt, built fresh each turn.
+
+Supports multiple campaigns - loads data for the active campaign.
 """
+
+
+DEFAULT_CAMPAIGN_ID = "default"
+
+
+def _get_campaign_id(guild_id=None):
+    """Get the active campaign ID for this context."""
+    from core.plugin_loader import plugin_loader
+    state = plugin_loader.get_plugin_state("dnd-campaign")
+
+    if guild_id:
+        return state.get(f"active_campaign:{guild_id}", DEFAULT_CAMPAIGN_ID)
+    return state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+
+
+def _load_campaign(guild_id=None):
+    """Load campaign data for the active campaign."""
+    from core.plugin_loader import plugin_loader
+    state = plugin_loader.get_plugin_state("dnd-campaign")
+
+    campaign_id = _get_campaign_id(guild_id)
+
+    # Check for legacy data and migrate if needed
+    if not state.get("_legacy_migrated"):
+        legacy = state.get("campaign")
+        if legacy:
+            state.save(f"campaign:{DEFAULT_CAMPAIGN_ID}", legacy)
+            state.save("campaign", None)
+        state.save("_legacy_migrated", True)
+
+    return state.get(f"campaign:{campaign_id}") or {}
 
 
 def prompt_inject(event):
@@ -33,14 +66,17 @@ def prompt_inject(event):
         if not dnd_active:
             return
 
-        state    = plugin_loader.get_plugin_state("dnd-campaign")
-        campaign = state.get("campaign") or {}
+        # Get guild_id from event if available
+        guild_id = getattr(event, 'guild_id', None)
+
+        campaign = _load_campaign(guild_id)
 
         if not campaign:
             # No campaign set up yet — inject a minimal reminder
             event.context_parts.append(
                 "[DM SYSTEM] No campaign is currently loaded. "
-                "Use the campaign_set tool to establish the campaign name, location, and active quest."
+                "Use the campaign_create tool to establish a new campaign, "
+                "or campaign_set to continue with legacy data."
             )
             return
 
@@ -54,7 +90,8 @@ def prompt_inject(event):
             )
             return
 
-        parts = ["[CAMPAIGN STATE — DM REFERENCE]"]
+        campaign_id = _get_campaign_id(guild_id)
+        parts = [f"[CAMPAIGN STATE — DM REFERENCE (Campaign: {campaign_id})]"]
 
         name = campaign.get("name", "Unnamed Campaign")
         parts.append(f"Campaign: {name}")
@@ -80,10 +117,19 @@ def prompt_inject(event):
         if completed:
             parts.append(f"Recently Completed: {', '.join(q['name'] for q in completed[-3:])}")
 
-        # Party
+        # Party - filtered by campaign
         try:
             char_state = plugin_loader.get_plugin_state("dnd-characters")
-            chars = char_state.get("characters") or {}
+            chars = char_state.get(f"characters:{campaign_id}") or {}
+            if not chars:
+                # Check for legacy character data
+                legacy_chars = char_state.get("characters")
+                if legacy_chars and not char_state.get(f"_legacy_migrated_{campaign_id}"):
+                    chars = legacy_chars
+                    # Migrate to campaign scope
+                    char_state.save(f"characters:{campaign_id}", chars)
+                    char_state.save(f"_legacy_migrated_{campaign_id}", True)
+
             if chars:
                 parts.append("Party:")
                 for c in chars.values():

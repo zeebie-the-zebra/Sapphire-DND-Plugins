@@ -96,18 +96,47 @@ TOOLS = [
     }
 ]
 
+DEFAULT_CAMPAIGN_ID = "default"
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-facts")
 
 
-def _load():
-    return _get_state().get("facts") or {}
+def _get_campaign_id(config=None) -> str:
+    from core.plugin_loader import plugin_loader
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        return campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+    except Exception:
+        return DEFAULT_CAMPAIGN_ID
 
 
-def _save(facts):
-    _get_state().save("facts", facts)
+def _migrate_if_needed(campaign_id: str):
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+    if state.get(migration_key):
+        return
+    legacy = state.get("facts")
+    if legacy:
+        state.save(f"facts:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load(config=None):
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+    _migrate_if_needed(campaign_id)
+    campaign_facts = state.get(f"facts:{campaign_id}")
+    if campaign_facts:
+        return campaign_facts
+    return state.get("facts") or {}
+
+
+def _save(facts, config=None):
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"facts:{campaign_id}", facts)
 
 
 def execute(function_name, arguments, config):
@@ -122,20 +151,20 @@ def execute(function_name, arguments, config):
         if not value:
             return "Error: value is required.", False
 
-        facts   = _load()
+        facts   = _load(config)
         existed = key in facts
         facts[key] = {
             "value":    value,
             "category": category,
             "updated":  datetime.now().strftime("%Y-%m-%d %H:%M")
         }
-        _save(facts)
+        _save(facts, config)
         action = "Updated" if existed else "Saved"
         return f"{action} fact [{key}] ({category}): {value}", True
 
     elif function_name == "fact_get":
         key   = arguments.get("key", "").strip().lower()
-        facts = _load()
+        facts = _load(config)
         if key not in facts:
             return f"No fact found with key '{key}'.", False
         f = facts[key]
@@ -166,11 +195,11 @@ def execute(function_name, arguments, config):
 
     elif function_name == "fact_delete":
         key   = arguments.get("key", "").strip().lower()
-        facts = _load()
+        facts = _load(config)
         if key not in facts:
             return f"No fact found with key '{key}'.", False
         del facts[key]
-        _save(facts)
+        _save(facts, config)
         return f"Deleted fact '{key}'.", True
 
     return f"Unknown function: {function_name}", False

@@ -1,8 +1,8 @@
 {
   "files": {
-    "hooks/context.py": "sha256:987209e7065b9495310c399853455ce1e7b80e179b70cb317459825db371bb8d",
-    "plugin.json": "sha256:9e15b596d8003f192d349d0dae2a36fe1aefdd519b1dcd9fd37f707afb54f42c",
-    "tools/campaign_tool.py": "sha256:ab3a7c4806b320e344821bbda49d060c62b91efc8df6ce6db97b5c3800ead12e"
+    "hooks/context.py": "sha256:017950b240a6297e3f8742a6cefaaf5b806a6abf35409a59ea7cd7556a0319f2",
+    "plugin.json": "sha256:db9532ecd39c03b7a7e27e0d4edc948a0826b63dd7dcc0d888293e2d46d146ff",
+    "tools/campaign_tool.py": "sha256:fe19ea12602ea7bbb2d1e3cd73d56015b05002711c5bd29ba7e58e661edd36f3"
   },
-  "signature": "5OZ4DJYzn6GXSVJ9KA9j29+N4r8DWGSyNZty2j/u9EYxSA/Jv54+NqEhchYgS8rXLyrcVcLoeCVwiX7U67ybCg=="
+  "signature": "HzdJqQCD2N6+R8oYPuD7wcxLXFf4c+ZjZx24Z4DDQIxQO4LAaDXZLlgRBBWdcXlOUBJxO/6Oya/MS4qNBJXWDA=="
 }

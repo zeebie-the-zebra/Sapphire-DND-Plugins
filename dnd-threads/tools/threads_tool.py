@@ -111,18 +111,47 @@ TOOLS = [
     }
 ]
 
+DEFAULT_CAMPAIGN_ID = "default"
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-threads")
 
 
-def _load():
-    return _get_state().get("threads") or {"next_id": 1, "items": []}
+def _get_campaign_id(config=None) -> str:
+    from core.plugin_loader import plugin_loader
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        return campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+    except Exception:
+        return DEFAULT_CAMPAIGN_ID
 
 
-def _save(data):
-    _get_state().save("threads", data)
+def _migrate_if_needed(campaign_id: str):
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+    if state.get(migration_key):
+        return
+    legacy = state.get("threads")
+    if legacy:
+        state.save(f"threads:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load(config=None):
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+    _migrate_if_needed(campaign_id)
+    campaign_threads = state.get(f"threads:{campaign_id}")
+    if campaign_threads:
+        return campaign_threads
+    return state.get("threads") or {"next_id": 1, "items": []}
+
+
+def _save(data, config=None):
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"threads:{campaign_id}", data)
 
 
 def execute(function_name, arguments, config):
@@ -142,7 +171,7 @@ def execute(function_name, arguments, config):
         if thread_type not in valid_types:
             thread_type = "consequence"
 
-        data      = _load()
+        data      = _load(config)
         thread_id = data.get("next_id", 1)
         data.setdefault("items", []).append({
             "id":          thread_id,
@@ -155,7 +184,7 @@ def execute(function_name, arguments, config):
             "created":     datetime.now().strftime("%Y-%m-%d %H:%M")
         })
         data["next_id"] = thread_id + 1
-        _save(data)
+        _save(data, config)
 
         emoji = TYPE_EMOJI.get(thread_type, "•")
         urg   = URGENCY_EMOJI.get(urgency, "")
@@ -179,7 +208,7 @@ def execute(function_name, arguments, config):
         found["status"]      = "resolved"
         found["resolution"]  = resolution or "resolved"
         found["resolved_at"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-        _save(data)
+        _save(data, config)
 
         msg = f"Thread #{thread_id} resolved: {found['description']}"
         if resolution:
@@ -226,12 +255,12 @@ def execute(function_name, arguments, config):
         if urgency not in URGENCY_ORDER:
             return f"Invalid urgency. Use: high, medium, low", False
 
-        data = _load()
+        data = _load(config)
         for t in data.get("items", []):
             if t["id"] == thread_id:
                 old = t["urgency"]
                 t["urgency"] = urgency
-                _save(data)
+                _save(data, config)
                 return f"Thread #{thread_id} urgency: {old} → {urgency}: {t['description']}", True
 
         return f"Thread #{thread_id} not found.", False

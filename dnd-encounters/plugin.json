@@ -1,7 +1,7 @@
 {
   "name": "dnd-encounters",
-  "version": "1.0.0",
-  "description": "D&D encounter builder — random encounters, initiative tracker, XP budgets",
+  "version": "1.0.1",
+  "description": "dnd-encounters. The D&D encounter builder — random encounters, initiative tracker, XP budgets",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 55,
   "default_enabled": true,

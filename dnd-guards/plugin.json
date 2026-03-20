@@ -1,7 +1,7 @@
 {
   "name": "dnd-guards",
-  "version": "1.0.0",
-  "description": "Tool guardrails and automatic reactions. pre_execute blocks dangerous tool calls. post_execute watches for death saves, auto-logs tool results to recap, and reacts to combat events.",
+  "version": "1.0.1",
+  "description": "dnd-guards. The Tool guardrails and automatic reactions. pre_execute blocks dangerous tool calls. post_execute watches for death saves, auto-logs tool results to recap, and reacts to combat events.",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 10,
   "default_enabled": true,

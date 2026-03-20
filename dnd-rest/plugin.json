@@ -1,0 +1,11 @@
+{
+  "name": "dnd-rest",
+  "version": "1.0.1",
+  "description": "dnd-rest. Manages long vs short rest mechanics — tracks what resources reset on which rest type, hit dice expenditure, and whether characters have benefited from a long rest today. Works with dnd-characters and dnd-resources.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 33,
+  "default_enabled": true,
+  "capabilities": {
+    "tools": ["tools/rest.py"]
+  }
+}

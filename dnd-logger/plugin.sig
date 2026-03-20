@@ -1,7 +1,7 @@
 {
   "files": {
     "hooks/logger.py": "sha256:6b70058a333f74579aa6afe34ccac86ea1fb23a8b2dd7da10d694995c6f3fed2",
-    "plugin.json": "sha256:203999a0ee8735385586495784fde7d66ffb222bb60911472be6cb8895a5beaa"
+    "plugin.json": "sha256:051b64e917072cd0ca8b2bc065f8d5106a9ea00ae9c18049638a811f4fa5f8eb"
   },
-  "signature": "OBoq07rw47mz+PyD+SwHxMYoLUm9qR6iu/5/XbXsnySucrzd9cnMPWNFxkpYlnfFNDPrHo/sQeWpoShVQ5LrAQ=="
+  "signature": "BLglxo4xLdxAcuA3uzxwKjlg8wf9ain3DW3fqPriLitdhRIt101yivsTX5NqZ4F+Ls1Xm18R69cBmRrCx3EeDQ=="
 }

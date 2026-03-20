@@ -1,7 +1,7 @@
 {
   "name": "dnd-reset",
-  "version": "1.0.0",
-  "description": "D&D campaign reset — wipe all plugin state for a fresh campaign start",
+  "version": "1.0.1",
+  "description": "dnd-reset. The D&D campaign reset — wipe all plugin state for a fresh campaign start",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 60,
   "default_enabled": true,

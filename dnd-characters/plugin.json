@@ -1,7 +1,7 @@
 {
   "name": "dnd-characters",
-  "version": "1.0.0",
-  "description": "D&D character sheet manager — create, update, and track player characters across sessions",
+  "version": "1.0.1",
+  "description": "dnd-characters. The D&D character sheet manager — create, update, and track player characters across sessions",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 55,
   "default_enabled": true,

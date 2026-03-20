@@ -13,6 +13,9 @@ Persistent storage for all player characters. Tracks:
 """
 
 import json
+import logging
+
+logger = logging.getLogger("dnd-characters")
 from datetime import datetime
 
 ENABLED = True
@@ -276,23 +279,79 @@ TOOLS = [
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+DEFAULT_CAMPAIGN_ID = "default"
+
+
 def _modifier(score: int) -> str:
     mod = (score - 10) // 2
     return f"+{mod}" if mod >= 0 else str(mod)
 
+
 def _prof_bonus(level: int) -> int:
     return max(2, (level - 1) // 4 + 2)
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-characters")
 
-def _load_all() -> dict:
-    state = _get_state()
-    return state.get("characters") or {}
 
-def _save_all(chars: dict):
-    _get_state().save("characters", chars)
+def _get_campaign_id(config=None) -> str:
+    """Get current campaign ID, defaulting to 'default' for backward compatibility."""
+    from core.plugin_loader import plugin_loader
+
+    # Try to get from campaign state
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        campaign_id = campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+        logger.warning(f"[dnd-characters] _get_campaign_id: active_campaign={campaign_id}, config={config}")
+        if campaign_id:
+            return campaign_id
+    except Exception as e:
+        logger.warning(f"[dnd-characters] _get_campaign_id error: {e}")
+
+    return DEFAULT_CAMPAIGN_ID
+
+
+def _migrate_if_needed(campaign_id: str):
+    """Migrate legacy character data to campaign scope if needed."""
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+
+    if state.get(migration_key):
+        return
+
+    # Check for legacy data
+    legacy = state.get("characters")
+    if legacy:
+        state.save(f"characters:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load_all(config=None) -> dict:
+    """Load characters for the current campaign."""
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+
+    # Migrate legacy data if needed
+    _migrate_if_needed(campaign_id)
+
+    # Try campaign-scoped data first
+    campaign_chars = state.get(f"characters:{campaign_id}")
+    logger.warning(f"[dnd-characters] _load_all: reading characters:{campaign_id}, found={bool(campaign_chars)}, keys={list(campaign_chars.keys()) if campaign_chars else []}")
+    if campaign_chars:
+        return campaign_chars
+
+    # Fall back to legacy data for backward compatibility
+    legacy = state.get("characters") or {}
+    logger.warning(f"[dnd-characters] _load_all: falling back to legacy, keys={list(legacy.keys())}")
+    return legacy
+
+
+def _save_all(chars: dict, config=None):
+    """Save characters to the current campaign's storage."""
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"characters:{campaign_id}", chars)
 
 def _find(name: str, chars: dict):
     key = name.lower().strip()
@@ -301,17 +360,22 @@ def _find(name: str, chars: dict):
             return k, v
     return None, None
 
-def _sync_combat_hp(char_name: str, new_hp: int):
+def _sync_combat_hp(char_name: str, new_hp: int, config=None):
     """
     If this character is in an active combat encounter, sync their HP
     in the encounter tracker so both systems stay in agreement.
     """
     try:
         from core.plugin_loader import plugin_loader
+
+        campaign_id = _get_campaign_id(config)
         enc_state = plugin_loader.get_plugin_state("dnd-encounters")
-        combat = enc_state.get("combat")
+        combat = enc_state.get(f"combat:{campaign_id}")
         if not combat:
-            return
+            # Fall back to legacy combat data
+            combat = enc_state.get("combat")
+            if not combat:
+                return
         combatants = combat.get("combatants", [])
         changed = False
         for c in combatants:
@@ -321,7 +385,8 @@ def _sync_combat_hp(char_name: str, new_hp: int):
                 break
         if changed:
             combat["combatants"] = combatants
-            enc_state.save("combat", combat)
+            # Save to campaign-scoped key
+            enc_state.save(f"combat:{campaign_id}", combat)
     except Exception:
         pass  # never crash on sync failure
 
@@ -368,7 +433,7 @@ def _sheet_summary(c: dict) -> str:
 # ── execute ────────────────────────────────────────────────────────────────────
 
 def execute(function_name, arguments, config):
-    chars = _load_all()
+    chars = _load_all(config)
 
     # ── character_create ──
     if function_name == "character_create":
@@ -416,7 +481,7 @@ def execute(function_name, arguments, config):
             "user_controlled":  arguments.get("user_controlled", False),
         }
         chars[name] = char
-        _save_all(chars)
+        _save_all(chars, config)
         return f"✅ Character created!\n\n{_sheet_summary(char)}", True
 
     # ── character_get ──
@@ -458,7 +523,7 @@ def execute(function_name, arguments, config):
                     pass
             char[k] = v
         chars[key] = char
-        _save_all(chars)
+        _save_all(chars, config)
         changed = ", ".join(f"{k}={v}" for k, v in fields.items())
         return f"✅ {key} updated: {changed}", True
 
@@ -469,7 +534,7 @@ def execute(function_name, arguments, config):
         if not char:
             return f"No character named '{name}' found.", False
         del chars[key]
-        _save_all(chars)
+        _save_all(chars, config)
         return f"🗑️ '{key}' has been deleted.", True
 
     # ── character_damage ──
@@ -495,8 +560,8 @@ def execute(function_name, arguments, config):
         new_hp = max(0, old_hp - remaining)
         char["hp_current"] = new_hp
         chars[key] = char
-        _save_all(chars)
-        _sync_combat_hp(key, new_hp)  # keep encounter tracker in sync
+        _save_all(chars, config)
+        _sync_combat_hp(key, new_hp, config)  # keep encounter tracker in sync
 
         msg = f"💥 {key} takes {amount}{type_str} damage. HP: {old_hp} → {new_hp}/{char['hp_max']}"
         if char.get("hp_temp", 0) < temp:
@@ -521,7 +586,7 @@ def execute(function_name, arguments, config):
             current_temp = char.get("hp_temp", 0)
             char["hp_temp"] = max(current_temp, amount)  # temp HP doesn't stack, take higher
             chars[key] = char
-            _save_all(chars)
+            _save_all(chars, config)
             return f"🛡️ {key} gains {amount} temporary HP. (Temp HP: {char['hp_temp']})", True
 
         if is_rest == "long":
@@ -532,16 +597,16 @@ def execute(function_name, arguments, config):
             # Restore all spell slots
             char["spell_slots_current"] = {k: v for k, v in char.get("spell_slots_max", {}).items()}
             chars[key] = char
-            _save_all(chars)
-            _sync_combat_hp(key, char["hp_max"])  # keep encounter tracker in sync
+            _save_all(chars, config)
+            _sync_combat_hp(key, char["hp_max"], config)  # keep encounter tracker in sync
             return f"🌙 {key} takes a long rest. HP restored to {char['hp_max']}/{char['hp_max']}. Spell slots restored.", True
 
         old_hp = char.get("hp_current", char["hp_max"])
         new_hp = min(char["hp_max"], old_hp + amount)
         char["hp_current"] = new_hp
         chars[key] = char
-        _save_all(chars)
-        _sync_combat_hp(key, new_hp)  # keep encounter tracker in sync
+        _save_all(chars, config)
+        _sync_combat_hp(key, new_hp, config)  # keep encounter tracker in sync
         return f"💚 {key} heals {amount} HP. HP: {old_hp} → {new_hp}/{char['hp_max']}", True
 
     # ── character_use_spell_slot ──
@@ -560,7 +625,7 @@ def execute(function_name, arguments, config):
         current[level] = available - 1
         char["spell_slots_current"] = current
         chars[key] = char
-        _save_all(chars)
+        _save_all(chars, config)
         return f"✨ {key} expends a level {level} spell slot. Remaining: {available-1}/{max_slots.get(level,0)}", True
 
     # ── character_restore_spell_slots ──
@@ -584,7 +649,7 @@ def execute(function_name, arguments, config):
 
         char["spell_slots_current"] = current
         chars[key] = char
-        _save_all(chars)
+        _save_all(chars, config)
         return f"✨ {key}'s spell slots restored ({restored}).", True
 
     # ── character_add_item ──
@@ -606,13 +671,13 @@ def execute(function_name, arguments, config):
                 entry["quantity"] += qty
                 char["inventory"] = inventory
                 chars[key] = char
-                _save_all(chars)
+                _save_all(chars, config)
                 return f"🎒 {key}: {item} quantity updated to {entry['quantity']}.", True
 
         inventory.append({"item": item, "quantity": qty, "notes": notes})
         char["inventory"] = inventory
         chars[key] = char
-        _save_all(chars)
+        _save_all(chars, config)
         return f"🎒 {key} receives: {item} x{qty}" + (f" ({notes})" if notes else "") + ".", True
 
     # ── character_remove_item ──
@@ -635,7 +700,7 @@ def execute(function_name, arguments, config):
                     result = f"🎒 {key}: {item} quantity reduced to {entry['quantity']}."
                 char["inventory"] = inventory
                 chars[key] = char
-                _save_all(chars)
+                _save_all(chars, config)
                 return result, True
 
         return f"'{item}' not found in {key}'s inventory.", False
@@ -663,17 +728,18 @@ def execute(function_name, arguments, config):
 
         char["conditions"] = conditions
         chars[key] = char
-        _save_all(chars)
+        _save_all(chars, config)
         # Sync conditions to combat tracker too
         try:
             from core.plugin_loader import plugin_loader
+            campaign_id = _get_campaign_id(config)
             enc_state = plugin_loader.get_plugin_state("dnd-encounters")
-            combat = enc_state.get("combat")
+            combat = enc_state.get(f"combat:{campaign_id}")
             if combat:
                 for c in combat.get("combatants", []):
                     if c["name"].lower() == key.lower():
                         c["conditions"] = conditions
-                        enc_state.save("combat", combat)
+                        enc_state.save(f"combat:{campaign_id}", combat)
                         break
         except Exception:
             pass
@@ -709,7 +775,7 @@ def execute(function_name, arguments, config):
                     char["user_controlled"] = False
                     chars[key] = char
 
-        _save_all(chars)
+        _save_all(chars, config)
 
         user_chars = ", ".join(f"**{n}**" for n in names)
         return f"✅ User-controlled characters: {user_chars}. Only these characters should act based on user input. Other party members are DM-controlled.", True

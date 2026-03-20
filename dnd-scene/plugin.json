@@ -1,7 +1,7 @@
 {
   "name": "dnd-scene",
-  "version": "1.0.0",
-  "description": "Immediate scene state tracker — who is in the room, what it looks/feels/smells like, lighting, mood. Injected every turn so Remmi never teleports NPCs or misremember the environment mid-scene.",
+  "version": "1.0.1",
+  "description": "dnd-scene. Immediate scene state tracker — who is in the room, what it looks/feels/smells like, lighting, mood. Injected every turn so Remmi never teleports NPCs or misremember the environment mid-scene.",
   "author": "Leona (Zeebie), with the help of Remmi for debugging",
   "priority": 35,
   "default_enabled": true,

@@ -186,16 +186,65 @@ SECRETS = [
 
 ATTITUDES = ["Friendly","Friendly","Neutral","Neutral","Neutral","Suspicious","Hostile"]
 
+DEFAULT_CAMPAIGN_ID = "default"
+
 
 def _get_state():
     from core.plugin_loader import plugin_loader
     return plugin_loader.get_plugin_state("dnd-npcs")
 
-def _load_all() -> dict:
-    return _get_state().get("npcs") or {}
 
-def _save_all(npcs: dict):
-    _get_state().save("npcs", npcs)
+def _get_campaign_id(config=None) -> str:
+    """Get current campaign ID, defaulting to 'default' for backward compatibility."""
+    from core.plugin_loader import plugin_loader
+
+    try:
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        campaign_id = campaign_state.get("active_campaign", DEFAULT_CAMPAIGN_ID)
+        if campaign_id:
+            return campaign_id
+    except Exception:
+        pass
+
+    return DEFAULT_CAMPAIGN_ID
+
+
+def _migrate_if_needed(campaign_id: str):
+    """Migrate legacy NPC data to campaign scope if needed."""
+    state = _get_state()
+    migration_key = f"_legacy_migrated_{campaign_id}"
+
+    if state.get(migration_key):
+        return
+
+    # Check for legacy data
+    legacy = state.get("npcs")
+    if legacy:
+        state.save(f"npcs:{campaign_id}", legacy)
+        state.save(migration_key, True)
+
+
+def _load_all(config=None) -> dict:
+    """Load NPCs for the current campaign."""
+    campaign_id = _get_campaign_id(config)
+    state = _get_state()
+
+    # Migrate legacy data if needed
+    _migrate_if_needed(campaign_id)
+
+    # Try campaign-scoped data first
+    campaign_npcs = state.get(f"npcs:{campaign_id}")
+    if campaign_npcs:
+        return campaign_npcs
+
+    # Fall back to legacy data for backward compatibility
+    return state.get("npcs") or {}
+
+
+def _save_all(npcs: dict, config=None):
+    """Save NPCs to the current campaign's storage."""
+    campaign_id = _get_campaign_id(config)
+    _get_state().save(f"npcs:{campaign_id}", npcs)
 
 def _find(name: str, npcs: dict):
     key = name.lower().strip()
@@ -371,7 +420,7 @@ TOOLS = [
 
 
 def execute(function_name, arguments, config):
-    npcs = _load_all()
+    npcs = _load_all(config)
 
     if function_name == "npc_generate":
         npc = _generate_npc(
@@ -382,7 +431,7 @@ def execute(function_name, arguments, config):
         save = arguments.get("save", True)
         if save:
             npcs[npc["name"]] = npc
-            _save_all(npcs)
+            _save_all(npcs, config)
             saved_note = " *(saved to roster)*"
         else:
             saved_note = " *(not saved)*"
@@ -403,7 +452,7 @@ def execute(function_name, arguments, config):
                 npc[field] = arguments[field]
         npc["name"] = name
         npcs[name] = npc
-        _save_all(npcs)
+        _save_all(npcs, config)
         return f"✅ {name} saved to NPC roster.\n\n{_npc_card(npc)}", True
 
     elif function_name == "npc_get":
@@ -435,7 +484,7 @@ def execute(function_name, arguments, config):
             new_note = arguments["notes"]
             npc["notes"] = (existing_notes + " | " + new_note).strip(" | ") if existing_notes else new_note
         npcs[key] = npc
-        _save_all(npcs)
+        _save_all(npcs, config)
         return f"✅ {key} updated.\n\n{_npc_card(npc)}", True
 
     elif function_name == "npc_delete":
@@ -444,7 +493,7 @@ def execute(function_name, arguments, config):
         if not npc:
             return f"No NPC named '{name}' found.", False
         del npcs[key]
-        _save_all(npcs)
+        _save_all(npcs, config)
         return f"🗑️ '{key}' removed from roster.", True
 
     return f"Unknown function: {function_name}", False

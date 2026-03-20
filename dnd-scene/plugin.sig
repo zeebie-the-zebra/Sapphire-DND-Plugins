@@ -1,8 +1,8 @@
 {
   "files": {
     "hooks/inject.py": "sha256:6aee9487d4f56be0cefc0016271015760b79c68e7f935864b33219ad1a2a248a",
-    "plugin.json": "sha256:ea62e4b8fcd2a0d5b4810c7936ff40fcfcc6cdac04b983cad9b379eae3691bfb",
-    "tools/scene_tool.py": "sha256:75bde71d510febb4885b4ad5dd9599eadd0a00e58ec79c4797fdf4805c7d780b"
+    "plugin.json": "sha256:b6bdd4467099eb2c115c9b535edeb20eba6ebb441f92b9409a8a019c41a2282e",
+    "tools/scene_tool.py": "sha256:e8794f4c9a88802fded0ebcf72048f3b049cd8f0f94358fd2e1e977302fdb827"
   },
-  "signature": "LQOauB0JaVcZZS7bjPAB8OwV2pj/6s9mOsMJd3nOMWQXEkGlLzQ3Vix5ziPTOP/FyjQNWNnhqtHe3RNHYlitDQ=="
+  "signature": "7IeRw/tw7W6B2HsBN8v9Hx9bGdy+FUw7Gm+XJdgkaYgbzzX4MstgLVA2T9WDSg54KcIChbrkFFsasyAz3POLBg=="
 }

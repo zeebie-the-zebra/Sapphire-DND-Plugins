@@ -1,0 +1,14 @@
+{
+  "name": "dnd-inspiration",
+  "version": "1.0.1",
+  "description": "dnd-inspiration. Tracks player inspiration — who has it, when it was used, narrative prompts to award it, and usage history. Keeps Remmi aware of inspiration state so it never forgets to flag unspent inspiration at dramatic moments.",
+  "author": "Leona (Zeebie), with the help of Remmi for debugging",
+  "priority": 29,
+  "default_enabled": true,
+  "hooks": {
+    "prompt_inject": "hooks/prompt_inject.py"
+  },
+  "capabilities": {
+    "tools": ["tools/inspiration.py"]
+  }
+}
