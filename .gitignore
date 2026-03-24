@@ -9,4 +9,5 @@ verify_plugin.py
 *.pyc
 __pycache__/
 discord/
+OLD/
 Light-Prompt.txt

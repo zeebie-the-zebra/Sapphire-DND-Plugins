@@ -1,0 +1,113 @@
+{
+  "name": "dnd-scaffold",
+  "version": "1.0.0",
+  "description": "Consolidated D&D 5e DM tools — characters, combat, travel, NPCs, spells, loot, mysteries, shops, time, and more",
+  "author": "Leona (Zeebie), with the help of Remmi",
+  "priority": 45,
+  "default_enabled": true,
+  "settings": {
+    "context_budget": {
+      "type": "integer",
+      "default": 6000,
+      "description": "Maximum characters to inject into prompt context"
+    },
+    "warn_at_percent": {
+      "type": "integer",
+      "default": 80,
+      "description": "Warn when context exceeds this percentage of budget"
+    }
+  },
+  "capabilities": {
+    "hooks": {
+      "pre_chat":      "hooks/toggle.py",
+      "pre_execute":   "hooks/mode_tracker.py",
+      "prompt_inject": "hooks/prompt_inject.py",
+      "post_execute":  "hooks/combat_hooks.py",
+      "post_llm":      "hooks/ooc_filter.py",
+      "post_chat":     "hooks/auto_log.py",
+      "pre_tts":       "hooks/enforcement_gate.py"
+    },
+    "voice_commands": [
+      {
+        "triggers": ["pause game", "pause the game", "out of character", "ooc"],
+        "match": "contains",
+        "bypass_llm": true,
+        "handler": "hooks/voice_commands.py",
+        "description": "Pause the game and switch to out-of-character mode"
+      },
+      {
+        "triggers": ["resume game", "resume the game", "in character", "back to the game", "resume"],
+        "match": "contains",
+        "bypass_llm": true,
+        "handler": "hooks/voice_commands.py",
+        "description": "Resume the game in DM character"
+      },
+      {
+        "triggers": ["recap", "what happened", "session recap", "story so far"],
+        "match": "contains",
+        "bypass_llm": false,
+        "handler": "hooks/voice_commands.py",
+        "description": "Ask the DM for a story recap (goes through LLM)"
+      },
+      {
+        "triggers": ["save game", "save session", "save progress"],
+        "match": "contains",
+        "bypass_llm": true,
+        "handler": "hooks/voice_commands.py",
+        "description": "Save a session checkpoint"
+      },
+      {
+        "triggers": ["party status", "show party", "check party", "party stats"],
+        "match": "contains",
+        "bypass_llm": true,
+        "handler": "hooks/voice_commands.py",
+        "description": "Show quick party HP and condition status"
+      },
+      {
+        "triggers": ["end session", "end the session", "session over"],
+        "match": "contains",
+        "bypass_llm": true,
+        "handler": "hooks/voice_commands.py",
+        "description": "End the current session and log a summary"
+      }
+    ],
+    "schedule": [
+      {
+        "name": "recap_compress",
+        "cron": "*/5 * * * *",
+        "handler": "hooks/compress.py",
+        "description": "Compresses raw event log into narrative summaries every 5 minutes"
+      }
+    ],
+    "tools": [
+      "tools/campaign.py",
+      "tools/characters.py",
+      "tools/dice.py",
+      "tools/encounter.py",
+      "tools/facts.py",
+      "tools/homebrew.py",
+      "tools/inspiration.py",
+      "tools/levelup.py",
+      "tools/loot.py",
+      "tools/mystery.py",
+      "tools/npcs.py",
+      "tools/recap.py",
+      "tools/relations.py",
+      "tools/resources.py",
+      "tools/rest.py",
+      "tools/reset.py",
+      "tools/rules.py",
+      "tools/scene.py",
+      "tools/shop.py",
+      "tools/spells.py",
+      "tools/status.py",
+      "tools/tables.py",
+      "tools/threads.py",
+      "tools/time.py",
+      "tools/travel.py",
+      "tools/weather.py"
+    ]
+  },
+  "modes": ["session", "combat", "exploration", "social", "downtime"],
+  "dependencies": ["dnd-campaign"]
+}
