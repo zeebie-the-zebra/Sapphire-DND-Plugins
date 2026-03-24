@@ -1,7 +1,5 @@
 {
   "files": {
-    "BUILD_NOTES.md": "sha256:323423d00d3304102611d5c540db74ad022e13f678397b3ea666e650c93e97c1",
-    "CHANGELOG.md": "sha256:7c0547b9ffbed3308eab70672d40aee6b684f828f9f52866d05566ba09e41e54",
     "README.md": "sha256:caf5408ba006afcf8e137ae1b48485b71d238cb1d56cc99bf4c2b6fc9d8693fd",
     "__init__.py": "sha256:66f136061f8e653fe25cd49830121de65de7b6340c8c92e0daee490cc2636308",
     "hooks/auto_log.py": "sha256:74e4ba6e9448dbe232b921fbbcbb35e274082e1a48b6b6c0fcf19ff3c67ed166",
@@ -48,5 +46,5 @@
     "tools/travel.py": "sha256:65694562c7b8249e8e9ac099e40fb2af7b8a436fca44b3aaa4c530102a4b36df",
     "tools/weather.py": "sha256:2b3e0beaa93c23ddc74242c957e12510f61001c4299eb03e70ef71deeeb8e933"
   },
-  "signature": "r0XgdRiBacqXAXTJYMPXKHijMQhSu9jXlBNTm2cISPVtxlclIDIN0Eyg2mr5FEDCN3BojpyLvdkwNMYJafOmDg=="
+  "signature": "uH2MBcFtG1NUFDxAfJ8y8vUhuY2+tLgcRVcDl0OHbs6xF4FSgDZPZSOGRFzII25C8zQXwMGGrA6vRnRQcY0aBQ=="
 }
