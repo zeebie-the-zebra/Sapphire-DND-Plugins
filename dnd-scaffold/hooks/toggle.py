@@ -66,12 +66,13 @@ def pre_chat(event):
     text = raw_input.strip().lower()
     clean = text.rstrip("!.,?").strip()
 
-    # Quick check before expensive regex work
-    triggers = [
-        "recent events", "session history", "established facts",
-        "current scene", "open threads", "campaign state"
-    ]
-    if any(t in clean for t in triggers):
+    # Only proceed if a genuine bracketed context block is present.
+    # The trigger phrases alone are too common in normal conversation.
+    # We require an actual block-like pattern before stripping anything.
+    has_inline = _INLINE_BLOCK.search(raw_input)
+    has_multiline = _MULTILINE_BLOCK.search(raw_input)
+    has_unbracketed = _UNBRACKETED_BLOCK.search(raw_input)
+    if has_inline or has_multiline or has_unbracketed:
         original = raw_input
         cleaned = raw_input
         removed = []

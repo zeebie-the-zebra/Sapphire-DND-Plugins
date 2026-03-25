@@ -4,6 +4,7 @@ dnd-scaffold/hooks/voice_commands.py — merged from dnd-voice
 Voice command shortcuts: pause, resume, save, party status, end session, recap.
 """
 
+import re
 from datetime import datetime
 
 
@@ -45,7 +46,10 @@ def pre_chat(event):
         _end_session(event)
 
     # ── RECAP — let through to LLM but prime it ──
-    elif any(t in inp for t in ["recap", "what happened", "story so far", "session recap"]):
+    # Use word boundaries for "recap" to avoid false matches on "compressed", "recapulated", etc.
+    elif any(re.search(r'\b' + re.escape(t) + r'\b', inp) for t in ["recap"]):
+        _recap_prime(event)
+    elif any(t in inp for t in ["what happened", "story so far", "session recap"]):
         _recap_prime(event)
 
 

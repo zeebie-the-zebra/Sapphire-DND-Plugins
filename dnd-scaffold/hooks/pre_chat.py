@@ -37,11 +37,13 @@ def pre_chat(event):
     if not text:
         return
 
-    triggers = [
-        "recent events", "session history", "established facts",
-        "current scene", "open threads", "campaign state"
-    ]
-    if not any(t in text.lower() for t in triggers):
+    # Only proceed if a genuine bracketed context block is present.
+    # The trigger phrases alone are too common in normal conversation.
+    # We require an actual block-like pattern before stripping anything.
+    has_inline = _INLINE_BLOCK.search(text)
+    has_multiline = _MULTILINE_BLOCK.search(text)
+    has_unbracketed = _UNBRACKETED_BLOCK.search(text)
+    if not (has_inline or has_multiline or has_unbracketed):
         return
 
     original = text
@@ -51,9 +53,6 @@ def pre_chat(event):
         matches = pattern.findall(cleaned)
         if matches:
             cleaned = pattern.sub("", cleaned)
-
-    if cleaned == original:
-        return
 
     cleaned = re.sub(r"\s{3,}", " ", cleaned).strip()
 

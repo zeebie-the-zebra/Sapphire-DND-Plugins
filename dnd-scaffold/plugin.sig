@@ -9,10 +9,10 @@
     "hooks/enforcement_gate.py": "sha256:5cf16d3deee6535599ee9dc8d9d635c8bc89d1fd0515adaecb049bb482576986",
     "hooks/mode_tracker.py": "sha256:0aaee7aa6ce70eb5316e5bc2011a3c93b49b8da61303da2aabf242e7abc34515",
     "hooks/ooc_filter.py": "sha256:c170d06466db94821894c5aee6211acb1202e0f37cfcfe06405f80f831494337",
-    "hooks/pre_chat.py": "sha256:092e8b4200146391c2dee55c53ba82cfcf6847b51abee41a5be1ab1a4eca5620",
+    "hooks/pre_chat.py": "sha256:4e209617af8ada91f2267f2739606c496f6c491c011152c79e37c0a8a9959ed9",
     "hooks/prompt_inject.py": "sha256:33a44546aeb75a4d9ec5501ce2a04850287f8e9e95d807658f46fd30d656f8af",
-    "hooks/toggle.py": "sha256:75b3c1664a22bd54c03175cdbd38dc9f9e120dcb9d648c96fdbfad79a9a8f28b",
-    "hooks/voice_commands.py": "sha256:e6ed0df5708d8695286ca58ba75bd3d9121005dbcf5c78c363f9a20d63d51f15",
+    "hooks/toggle.py": "sha256:a0bfa01ec1490f8ceb83a1c89b3abdb9ae54d9318cb813ba68d6b1f035bbce6e",
+    "hooks/voice_commands.py": "sha256:71f2f51b6f3e5a3571eec0b7bc9415c35cafe25942baca979df9186a918d9fdc",
     "manifest/config.py": "sha256:e997f10c0bb02c071e187b39c79257520b50f2c0eef6a13d1ed6d18d5d0b38f8",
     "mode_contexts/combat.md": "sha256:062a993f85c3535a5b0105c1b8562076992e0da101ff08056748539dd48044f2",
     "mode_contexts/downtime.md": "sha256:8c5f56df017a5c7e81c55da2464c7e09b5c64a63c450eed5f32086fd7874314c",
@@ -47,5 +47,5 @@
     "tools/travel.py": "sha256:9bc80f74812172164acd8f82d67e22c4a6801936530878a96bce46403dfd2843",
     "tools/weather.py": "sha256:278382d6ddf38eb02e208b91874642f966e0220a0b20db6d27b8b9baf7efbfa0"
   },
-  "signature": "F4Veod0G5CGp0SfXYx7c7HzvLiFvTbYDhRy+ivZdK8fcTNXTIbmO0PDJcFcWhZpG8qDWMuIT07uiDUxKqEftDA=="
+  "signature": "p7TlMUTMkJo8IDxhRAprwF1WFDyH/tmhMq3surnbna5brcgfUYeHtUi705yDd2GV4HZkdsaQOzDechZZmWAKAw=="
 }

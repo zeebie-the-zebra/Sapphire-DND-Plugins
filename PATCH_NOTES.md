@@ -74,6 +74,7 @@ dnd-characters for migration.
 
 8. hooks/compress.py
 - Now iterates all known campaigns and compresses each one's recap independently    
+- "recap" now uses word-boundary regex (\brecap\b) instead of substring matching, so only the standalone word recap triggers it — not compress, recapulated, etc.
 
 ---
 New Features
