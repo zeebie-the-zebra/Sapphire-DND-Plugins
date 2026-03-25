@@ -95,7 +95,7 @@ WEATHER_SPELL_EFFECTS = {
 
 
 def _state():
-    return plugin_loader.get_plugin_state("dnd-weather")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _load():

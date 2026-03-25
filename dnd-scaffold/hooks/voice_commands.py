@@ -102,10 +102,10 @@ def _save_game(event):
         cam_state = plugin_loader.get_plugin_state("dnd-campaign")
         campaign = cam_state.get("campaign") or {}
 
-        char_state = plugin_loader.get_plugin_state("dnd-characters")
+        char_state = plugin_loader.get_plugin_state("dnd-scaffold")
         characters = char_state.get("characters") or {}
 
-        npc_state = plugin_loader.get_plugin_state("dnd-npcs")
+        npc_state = plugin_loader.get_plugin_state("dnd-scaffold")
         npcs = npc_state.get("npcs") or {}
 
         log_state = plugin_loader.get_plugin_state("dnd-scaffold")
@@ -133,7 +133,7 @@ def _party_status(event):
     """Quick party HP and status readout."""
     try:
         from core.plugin_loader import plugin_loader
-        state = plugin_loader.get_plugin_state("dnd-characters")
+        state = plugin_loader.get_plugin_state("dnd-scaffold")
         chars = state.get("characters") or {}
 
         if not chars:
@@ -148,7 +148,7 @@ def _party_status(event):
                 conds = f" ⚠️ {', '.join(c.get('conditions', []))}" if c.get("conditions") else ""
                 lines.append(f"• **{c['name']}** [{bar}] {hp}/{hp_max} HP{conds}")
 
-            enc_state = plugin_loader.get_plugin_state("dnd-encounters")
+            enc_state = plugin_loader.get_plugin_state("dnd-scaffold")
             combat = enc_state.get("combat") or {}
             if combat:
                 rnd = combat.get("round", 1)

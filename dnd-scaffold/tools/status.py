@@ -201,7 +201,7 @@ def status_get_all(include_npcs: bool = False) -> str:
 
     # ── RESOURCES ─────────────────────────────────────────────────────────────
     try:
-        res_state = plugin_loader.get_plugin_state("dnd-resources")
+        res_state = plugin_loader.get_plugin_state("dnd-scaffold")
         res_index_raw = res_state.get(f"resource_index:{campaign_id}")
         if not res_index_raw:
             res_index_raw = res_state.get("resource_index")
@@ -233,7 +233,7 @@ def status_get_all(include_npcs: bool = False) -> str:
 
     # ── COMBAT ────────────────────────────────────────────────────────────────
     try:
-        enc_state = plugin_loader.get_plugin_state("dnd-encounters")
+        enc_state = plugin_loader.get_plugin_state("dnd-scaffold")
 
         # Try campaign-scoped combat data first
         combat = enc_state.get(f"combat:{campaign_id}")
@@ -295,7 +295,7 @@ def status_get_all(include_npcs: bool = False) -> str:
     # ── NPC RELATIONS (optional) ──────────────────────────────────────────────
     if include_npcs:
         try:
-            rel_state = plugin_loader.get_plugin_state("dnd-npc-relations")
+            rel_state = plugin_loader.get_plugin_state("dnd-scaffold")
             rel_raw = rel_state.get(f"relations_index:{campaign_id}")
             if not rel_raw:
                 rel_raw = rel_state.get("relations_index")

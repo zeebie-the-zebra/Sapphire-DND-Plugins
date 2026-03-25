@@ -220,7 +220,7 @@ DEFAULT_CAMPAIGN_ID = "default"
 
 def _get_state():
     from core.plugin_loader import plugin_loader
-    return plugin_loader.get_plugin_state("dnd-scene")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _get_campaign_id(config=None) -> str:
@@ -341,7 +341,7 @@ def execute(function_name, arguments, config):
             except Exception:
                 pass
             try:
-                npc_state = plugin_loader.get_plugin_state("dnd-npcs")
+                npc_state = plugin_loader.get_plugin_state("dnd-scaffold")
                 npcs = npc_state.get(f"npcs:{campaign_id}") or npc_state.get("npcs") or {}
                 for npc in npcs.values() if isinstance(npcs, dict) else []:
                     if npc.get("name"):
@@ -448,7 +448,7 @@ def execute(function_name, arguments, config):
         except Exception:
             pass
         try:
-            npc_state = plugin_loader.get_plugin_state("dnd-npcs")
+            npc_state = plugin_loader.get_plugin_state("dnd-scaffold")
             npcs = npc_state.get(f"npcs:{campaign_id}") or npc_state.get("npcs") or {}
             for npc in npcs.values() if isinstance(npcs, dict) else []:
                 if npc.get("name"):
@@ -460,6 +460,21 @@ def execute(function_name, arguments, config):
             return f"ERROR: '{name}' is not in the campaign roster. Valid names: {valid}", False
 
         data = _load(config)
+
+        current = data.get("current", {})
+        if not current:
+            return "No scene set.", False
+
+        present = current.get("present", [])
+        if name in present:
+            return f"{name} is already in the scene.", True
+
+        present.append(name)
+        current["present"] = present
+        data["current"] = current
+        _save(data, config)
+        msg = f"{name} added to scene" + (f" ({note})" if note else "")
+        return msg, True
 
     elif function_name == "scene_remove_person":
         name   = arguments.get("name", "").strip()

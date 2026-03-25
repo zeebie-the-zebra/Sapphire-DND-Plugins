@@ -191,7 +191,7 @@ DEFAULT_CAMPAIGN_ID = "default"
 
 def _get_state():
     from core.plugin_loader import plugin_loader
-    return plugin_loader.get_plugin_state("dnd-npcs")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _get_campaign_id(config=None) -> str:

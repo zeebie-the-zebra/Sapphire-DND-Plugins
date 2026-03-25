@@ -16,34 +16,45 @@ KEEP_RAW = 4
 def run_compress():
     """
     Scheduled task: compress raw recap events into narrative summaries.
+    Iterates over all campaigns to compress each one's recap.
     Safe LLM call — runs outside of any chat turn.
     """
     try:
         from core.plugin_loader import plugin_loader
         state = plugin_loader.get_plugin_state("dnd-scaffold")
-        data = state.get("recap") or {
-            "summaries": [], "raw_events": [], "last_session": None
-        }
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
 
-        raw = data.get("raw_events", [])
-        if len(raw) < COMPRESS_EVERY + KEEP_RAW:
-            logger.debug("[compress] Not enough events to compress")
-            return
+        # Get all known campaign IDs
+        campaigns = campaign_state.get("campaigns") or {}
+        all_campaign_ids = list(campaigns.keys()) or ["default"]
+        if "default" not in all_campaign_ids:
+            all_campaign_ids.append("default")
 
-        to_compress = raw[:-KEEP_RAW]
-        data["raw_events"] = raw[-KEEP_RAW:]
+        for campaign_id in all_campaign_ids:
+            try:
+                key = f"recap:{campaign_id}"
+                data = state.get(key)
+                if not data:
+                    continue
 
-        summary_text = " ".join(
-            e.replace("[tool] ", "").replace("[auto] ", "")
-            for e in to_compress
-        )
+                raw = data.get("raw_events", [])
+                if len(raw) < COMPRESS_EVERY + KEEP_RAW:
+                    continue
 
-        if summary_text:
-            data.setdefault("summaries", []).append(summary_text)
-            state.save("recap", data)
-            logger.info(f"[compress] Compressed {len(to_compress)} events into summary")
-        else:
-            logger.debug("[compress] No meaningful events to compress")
+                to_compress = raw[:-KEEP_RAW]
+                data["raw_events"] = raw[-KEEP_RAW:]
+
+                summary_text = " ".join(
+                    e.replace("[tool] ", "").replace("[auto] ", "")
+                    for e in to_compress
+                )
+
+                if summary_text:
+                    data.setdefault("summaries", []).append(summary_text)
+                    state.save(key, data)
+                    logger.info(f"[compress] Compressed {len(to_compress)} events for campaign '{campaign_id}'")
+            except Exception as e:
+                logger.debug(f"[compress] Failed for campaign '{campaign_id}': {e}")
 
     except Exception as e:
         logger.error(f"[compress] Compression failed: {e}")

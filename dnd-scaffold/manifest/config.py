@@ -131,6 +131,7 @@ TOOL_MODES = {
     "campaign_set":          ["session"],
     "campaign_get":          ["session"],
     "campaign_quest":        ["session"],
+    "campaign_quest_delete": ["session"],
     "campaign_set_mode":     ["session"],
     "campaign_create":       ["session"],
     "campaign_list":         ["session"],

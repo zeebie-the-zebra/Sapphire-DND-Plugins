@@ -86,28 +86,30 @@ def _get_campaign_id():
 
 
 def _get_all_characters():
-    """Read all characters from dnd-characters plugin state for the current campaign."""
+    """Read all characters from dnd-scaffold plugin state for the current campaign."""
     try:
         campaign_id = _get_campaign_id()
-        char_state = plugin_loader.get_plugin_state("dnd-characters")
-        chars = char_state.get(f"characters:{campaign_id}") or {}
+        char_state = plugin_loader.get_plugin_state("dnd-scaffold")
+        chars = char_state.get(f"characters:{campaign_id}")
         if not chars:
-            chars = char_state.get("characters") or {}
-        return list(chars.values()) if chars else []
+            chars = char_state.get("characters")
+        if isinstance(chars, dict) and chars:
+            return list(chars.values())
+        return []
     except Exception as e:
         logger.debug(f"[prompt_inject] Could not read characters: {e}")
         return []
 
 
 def _is_combat_active():
-    """Check if combat is currently running via dnd-encounters state."""
+    """Check if combat is currently running via dnd-scaffold state."""
     try:
         campaign_id = _get_campaign_id()
-        enc_state = plugin_loader.get_plugin_state("dnd-encounters")
+        enc_state = plugin_loader.get_plugin_state("dnd-scaffold")
         combat = enc_state.get(f"combat:{campaign_id}")
         if not combat:
             combat = enc_state.get("combat")
-        return bool(combat)
+        return bool(combat and isinstance(combat, dict))
     except Exception:
         return False
 
@@ -116,10 +118,12 @@ def _get_inspiration_state():
     """Get active inspiration awards for the campaign."""
     try:
         campaign_id = _get_campaign_id()
-        insp_state = plugin_loader.get_plugin_state("dnd-inspiration")
-        awards = insp_state.get(f"awards:{campaign_id}") or []
+        insp_state = plugin_loader.get_plugin_state("dnd-scaffold")
+        awards = insp_state.get(f"awards:{campaign_id}")
         if not awards:
-            awards = insp_state.get("awards") or []
+            awards = insp_state.get("awards")
+        if not isinstance(awards, list):
+            return []
         return awards
     except Exception:
         return []
@@ -129,11 +133,13 @@ def _get_travel_state():
     """Get current travel state if any."""
     try:
         campaign_id = _get_campaign_id()
-        travel_state = plugin_loader.get_plugin_state("dnd-travel")
+        travel_state = plugin_loader.get_plugin_state("dnd-scaffold")
         travel = travel_state.get(f"travel_state:{campaign_id}")
         if not travel:
             travel = travel_state.get("travel_state")
-        return travel or {}
+        if not isinstance(travel, dict):
+            return {}
+        return travel
     except Exception:
         return {}
 
@@ -142,10 +148,12 @@ def _get_high_urgency_threads():
     """Get threads marked as high urgency."""
     try:
         campaign_id = _get_campaign_id()
-        thread_state = plugin_loader.get_plugin_state("dnd-threads")
-        threads = thread_state.get(f"threads:{campaign_id}") or {}
+        thread_state = plugin_loader.get_plugin_state("dnd-scaffold")
+        threads = thread_state.get(f"threads:{campaign_id}")
         if not threads:
-            threads = thread_state.get("threads") or {}
+            threads = thread_state.get("threads")
+        if not isinstance(threads, dict):
+            return []
         urgent = []
         for t in threads.values():
             if t.get("urgency") in ("high", "critical"):
@@ -247,7 +255,7 @@ def prompt_inject(event):
 
     # ── Travel state ──────────────────────────────────────────────────────────
     travel = _get_travel_state()
-    if travel:
+    if travel and isinstance(travel, dict):
         pace = travel.get("pace", "normal")
         distance = travel.get("distance_traveled", 0)
         destination = travel.get("destination", "unknown")

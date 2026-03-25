@@ -112,7 +112,7 @@ def _get_campaign_id(config=None) -> str:
 
 
 def _state():
-    return plugin_loader.get_plugin_state("dnd-shop")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _key(shop_name: str, config=None) -> str:

@@ -28,6 +28,23 @@ def _shadow_get_state():
     return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
+def _recap_key(event=None):
+    """Get the campaign-scoped recap key for the current context."""
+    try:
+        from core.plugin_loader import plugin_loader
+        campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+        campaign_id = campaign_state.get("active_campaign", "default")
+        if event and hasattr(event, "config") and event.config:
+            guild_id = event.config.get("guild_id") if isinstance(event.config, dict) else None
+            if guild_id:
+                val = campaign_state.get(f"active_campaign:{guild_id}")
+                if val:
+                    campaign_id = val
+        return f"recap:{campaign_id}"
+    except Exception:
+        return "recap:default"
+
+
 def _shadow_get_recent_narrative(event, lookback=4):
     """
     Get recent narrative text from chat history.
@@ -68,11 +85,11 @@ def _shadow_flag_discrepancy(state, tool, args, message, raw_context=""):
         state.save("shadow_discrepancies", discrepancies)
 
         try:
-            recap_data = state.get("recap") or {"raw_events": []}
+            recap_data = state.get(_recap_key(event)) or {"raw_events": []}
             recap_data.setdefault("raw_events", []).append(
                 f"[SHADOW] {message}"
             )
-            state.save("recap", recap_data)
+            state.save(_recap_key(event), recap_data)
         except Exception:
             pass
     except Exception:
@@ -148,10 +165,10 @@ def _shadow_validate_tool(event, fn, args, result, narrative, narrative_lower, s
                     char_mentioned_near_damage = True
                     break
 
-        has_damage_number = any(
+        has_damage_number = any([
             re.search(rf'\b\d+\b.*\b{re.escape(char_lower)}\b', narrative_lower),
             re.search(rf'\b{re.escape(char_lower)}\b.*\b\d+\b.*(?:damage|hit)', narrative_lower),
-        )
+        ])
 
         if not char_mentioned_near_damage and not has_damage_number:
             _shadow_flag_discrepancy(
@@ -266,14 +283,14 @@ def post_execute(event):
 
     # ── 2. Combat end — log XP to recap ───────────────────────────────────
     elif fn == "encounter_end_combat":
-        _log_to_recap(f"Combat ended. {result[:150]}")
-        _check_level_ups()
+        _log_to_recap(f"Combat ended. {result[:150]}", event)
+        _check_level_ups(event)
 
     # ── 3. Scene move — log to recap ─────────────────────────────────────
     elif fn == "scene_move":
         args = event.arguments or {}
         name = args.get("name", "unknown location")
-        _log_to_recap(f"Party moved to {name}.")
+        _log_to_recap(f"Party moved to {name}.", event)
 
     # ── 4. Quest changes — log to recap ──────────────────────────────────
     elif fn == "campaign_quest":
@@ -281,7 +298,7 @@ def post_execute(event):
         action = args.get("action", "")
         quest = args.get("quest", "")
         if action and quest:
-            _log_to_recap(f"Quest {action}: {quest}")
+            _log_to_recap(f"Quest {action}: {quest}", event)
 
     # ── 5. NPC saved — log to recap ──────────────────────────────────────
     elif fn == "npc_save":
@@ -289,7 +306,7 @@ def post_execute(event):
         npc = args.get("npc", {})
         name = npc.get("name", "") if isinstance(npc, dict) else ""
         if name:
-            _log_to_recap(f"New NPC encountered and saved: {name}.")
+            _log_to_recap(f"New NPC encountered and saved: {name}.", event)
 
     # ── 6. Fact set — log important facts to recap ────────────────────────
     elif fn == "fact_set":
@@ -298,7 +315,7 @@ def post_execute(event):
         val = args.get("value", "")
         cat = args.get("category", "general")
         if cat in ("secrets", "clues") and key and val:
-            _log_to_recap(f"[{cat.upper()}] {key}: {val[:100]}")
+            _log_to_recap(f"[{cat.upper()}] {key}: {val[:100]}", event)
 
     # ── 7. Travel advance — weather shift chance ─────────────────────────
     elif fn == "travel_advance":
@@ -341,18 +358,18 @@ def _check_death_save(event, result: str):
         except Exception:
             pass
 
-        _log_to_recap(f"⚠️ {char_name} dropped to 0 HP — death saving throws begun.")
+        _log_to_recap(f"⚠️ {char_name} dropped to 0 HP — death saving throws begun.", event)
 
     except Exception:
         pass
 
 
-def _check_level_ups():
+def _check_level_ups(event=None):
     """Check if any characters are ready to level up after combat XP awards."""
     try:
         from core.plugin_loader import plugin_loader
 
-        char_state = plugin_loader.get_plugin_state("dnd-characters")
+        char_state = plugin_loader.get_plugin_state("dnd-scaffold")
         chars = char_state.get("characters") or {}
 
         try:
@@ -382,7 +399,7 @@ def _check_level_ups():
 
         if ready:
             names = ", ".join(f"{n} (→ L{lv})" for n, lv in ready)
-            _log_to_recap(f"⬆️ LEVEL UP READY after XP award: {names}")
+            _log_to_recap(f"⬆️ LEVEL UP READY after XP award: {names}", event)
 
     except Exception:
         pass
@@ -412,12 +429,13 @@ def _handle_travel_advance(event):
         pass
 
 
-def _log_to_recap(note: str):
-    """Append a brief note to the recap raw events."""
+def _log_to_recap(note: str, event=None):
+    """Append a brief note to the recap raw events (campaign-scoped)."""
     try:
         from core.plugin_loader import plugin_loader
         state = plugin_loader.get_plugin_state("dnd-scaffold")
-        data = state.get("recap") or {
+        key = _recap_key(event) if event else "recap:default"
+        data = state.get(key) or {
             "summaries": [], "raw_events": [], "last_session": None
         }
         data.setdefault("raw_events", []).append(f"[tool] {note}")
@@ -433,7 +451,7 @@ def _log_to_recap(note: str):
             if summary:
                 data.setdefault("summaries", []).append(summary)
 
-        state.save("recap", data)
+        state.save(key, data)
     except Exception:
         pass
 

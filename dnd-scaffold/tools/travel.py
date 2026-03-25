@@ -69,7 +69,7 @@ def _get_campaign_id(config=None) -> str:
 
 
 def _state():
-    return plugin_loader.get_plugin_state("dnd-travel")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _load(config=None):

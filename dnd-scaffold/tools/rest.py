@@ -15,10 +15,121 @@ import logging
 
 logger = logging.getLogger("dnd-rest")
 
-# Import resource_restore so rest_long/rest_short can auto-restore resources
-from tools.resources import resource_restore
+# resource_restore and resource_setup are inlined below because tools/ are exec'd by
+# function_manager (not imported as packages), so cross-tool imports don't work.
 
 DEFAULT_CAMPAIGN_ID = "default"
+
+
+def _resource_state():
+    """Get the dnd-scaffold plugin state (where resources are stored)."""
+    return plugin_loader.get_plugin_state("dnd-scaffold")
+
+
+def _resource_load(config):
+    """Load resources data, same logic as resources._load()."""
+    campaign_id = _get_campaign_id(config)
+    state = _resource_state()
+    campaign_resources = state.get(f"resources:{campaign_id}")
+    if campaign_resources:
+        return campaign_resources
+    return state.get("resources") or {}
+
+
+def _resource_save(data, config):
+    """Save resources data, same logic as resources._save()."""
+    campaign_id = _get_campaign_id(config)
+    _resource_state().save(f"resources:{campaign_id}", data)
+
+
+def _resource_auto_setup(name, class_name, level, config):
+    """
+    Auto-set up resources for a character if not already configured.
+    Inlined from resources.resource_setup to avoid cross-tool import issues.
+    """
+    if not class_name:
+        return
+
+    # Default resources by class (subset of resources._default_resources)
+    defaults = []
+    cn = class_name.lower().strip()
+
+    if cn == "barbarian":
+        rages = 2 + (3 if level >= 3 else 0) + (1 if level >= 6 else 0) + (1 if level >= 12 else 0) + (1 if level >= 17 else 0)
+        if level >= 20: rages = 999
+        defaults.append(("Rage", rages, "long", f"+{2 if level < 9 else (3 if level < 16 else 4)} damage"))
+
+    elif cn == "bard":
+        recharge = "short" if level >= 5 else "long"
+        die = "d6" if level < 5 else ("d8" if level < 10 else ("d10" if level < 15 else "d12"))
+        defaults.append(("Bardic Inspiration", "CHA mod", recharge, f"{die} bonus"))
+
+    elif cn == "cleric":
+        cd = 1 if level < 6 else (2 if level < 18 else 3)
+        defaults.append(("Channel Divinity", cd, "short", "Turn Undead"))
+
+    elif cn == "druid":
+        ws = 2 if level < 20 else 999
+        defaults.append(("Wild Shape", ws, "short", "Transform into beast"))
+
+    elif cn == "fighter":
+        defaults.append(("Second Wind", 1, "short", "Heal 1d10+level HP"))
+        as_uses = 1 if level < 17 else 2
+        defaults.append(("Action Surge", as_uses, "short", "Extra action"))
+
+    elif cn == "monk":
+        ki = level * 2
+        defaults.append(("Ki", ki, "long", "Flurry of Blows, Stunning Strike, etc."))
+
+    elif cn == "paladin":
+        defaults.append(("Lay on Hands", level, "long", f"Heal {level * 5} HP"))
+        cd = 1 if level < 6 else 2
+        defaults.append(("Channel Divinity", cd, "short", "Divine Health, Turn"))
+
+    elif cn == "ranger":
+        defaults.append(("Hunter Prey", 1, "short", "Colossus Slayer / Giantslayer"))
+
+    elif cn == "rogue":
+        pass  # Sneak Attack is passive, no resource to track
+
+    elif cn == "sorcerer":
+        points = level * 2 if level < 17 else (14 if level < 18 else 18)
+        defaults.append(("Sorcery Points", points, "long", "Convert to spell slots"))
+
+    elif cn == "warlock":
+        slots = min(4, max(1, (level + 1) // 2))
+        defaults.append(("Pact Magic Slots", slots, "short", "Recharge on short rest"))
+        if level >= 11:
+            defaults.append(("Mystic Arcanum (6th)", 1, "long", "Cast 6th-level spell"))
+
+    elif cn == "wizard":
+        pass  # Arcane Recovery is short-rest recharge on spell slots
+
+    if not defaults:
+        return
+
+    data = _resource_load(config)
+    char_data = data.get(name, {})
+    existing_resources = char_data.get("resources", [])
+
+    def find_resource(name_to_find):
+        for r in existing_resources:
+            if r["name"].lower() == name_to_find.lower():
+                return r
+        return None
+
+    for rname, rmax, recharge, note in defaults:
+        existing = find_resource(rname)
+        if existing:
+            existing["max"] = rmax
+        else:
+            existing_resources.append({
+                "name": rname, "max": rmax, "current": rmax,
+                "recharge": recharge, "note": note
+            })
+
+    data[name] = {"class": class_name, "level": level, "resources": existing_resources}
+    _resource_save(data, config)
 
 # Resources that reset on each rest type
 SHORT_REST_RESETS = [
@@ -62,7 +173,7 @@ def _get_campaign_id(config=None) -> str:
 
 
 def _state():
-    return plugin_loader.get_plugin_state("dnd-rest")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _load(config=None):
@@ -139,14 +250,42 @@ def rest_long(
 
         # Auto-restore resources via dnd-resources
         try:
-            res_result = resource_restore(name, "long", config)
-            if res_result and not res_result.startswith("No resources"):
-                # Strip the header line since we embed into a longer response
-                res_lines = res_result.split("\n")
-                if len(res_lines) > 1:
-                    for line in res_lines[1:]:
-                        if line.strip():
-                            char_lines.append(f"    {line.strip()}")
+            # Auto-setup resources if not yet configured
+            try:
+                char_state = plugin_loader.get_plugin_state("dnd-scaffold")
+                campaign_id = _get_campaign_id(config)
+                chars = char_state.get(f"characters:{campaign_id}") or char_state.get("characters") or {}
+                char_record = None
+                for c in chars.values():
+                    if c.get("name", "").lower() == name.lower():
+                        char_record = c
+                        break
+                if char_record:
+                    res_data = _resource_load(config)
+                    if name not in res_data or not res_data[name].get("resources"):
+                        class_name = char_record.get("class_name", "")
+                        level = char_record.get("level", 1)
+                        if class_name:
+                            _resource_auto_setup(name, class_name, level, config)
+                            char_lines.append(f"    (auto-setup resources for {class_name} L{level})")
+            except Exception:
+                pass  # Auto-setup is best-effort
+
+            # Restore long-rest resources inline
+            data_res = _resource_load(config)
+            char_data = data_res.get(name)
+            if char_data and char_data.get("resources"):
+                restored = []
+                for r in char_data.get("resources", []):
+                    rc = r.get("recharge", "long")
+                    if rc == "long" and rc not in ("passive", "reaction", "dawn"):
+                        old = r.get("current", 0)
+                        r["current"] = r["max"]
+                        if old != r["max"]:
+                            restored.append(r["name"])
+                if restored:
+                    _resource_save(data_res, config)
+                    char_lines.append(f"    Resources restored: {', '.join(restored)}")
         except Exception:
             pass
 
@@ -233,13 +372,41 @@ def rest_short(
 
         # Auto-restore short-rest resources via dnd-resources
         try:
-            res_result = resource_restore(name, "short", config)
-            if res_result and not res_result.startswith("No resources"):
-                res_lines = res_result.split("\n")
-                if len(res_lines) > 1:
-                    for line in res_lines[1:]:
-                        if line.strip():
-                            char_lines.append(f"    {line.strip()}")
+            # Auto-setup resources if not yet configured
+            try:
+                char_state = plugin_loader.get_plugin_state("dnd-scaffold")
+                campaign_id = _get_campaign_id(config)
+                chars = char_state.get(f"characters:{campaign_id}") or char_state.get("characters") or {}
+                char_record = None
+                for c in chars.values():
+                    if c.get("name", "").lower() == name.lower():
+                        char_record = c
+                        break
+                if char_record:
+                    res_data = _resource_load(config)
+                    if name not in res_data or not res_data[name].get("resources"):
+                        class_name = char_record.get("class_name", "")
+                        level = char_record.get("level", 1)
+                        if class_name:
+                            _resource_auto_setup(name, class_name, level, config)
+            except Exception:
+                pass  # Auto-setup is best-effort
+
+            # Restore short-rest resources inline
+            data_res = _resource_load(config)
+            char_data = data_res.get(name)
+            if char_data and char_data.get("resources"):
+                restored = []
+                for r in char_data.get("resources", []):
+                    rc = r.get("recharge", "long")
+                    if rc in ("short", "long"):
+                        old = r.get("current", 0)
+                        r["current"] = r["max"]
+                        if old != r["max"]:
+                            restored.append(r["name"])
+                if restored:
+                    _resource_save(data_res, config)
+                    char_lines.append(f"    Resources restored: {', '.join(restored)}")
         except Exception:
             pass
 

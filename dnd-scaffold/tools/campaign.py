@@ -105,7 +105,7 @@ def _campaign_debug(config=None) -> str:
     # For each known campaign, check if it has character data
     lines.append(f"\nCharacter data per campaign:")
     try:
-        char_state = plugin_loader.get_plugin_state("dnd-characters")
+        char_state = plugin_loader.get_plugin_state("dnd-scaffold")
         all_campaign_ids = list(campaigns.keys())
         if "default" not in all_campaign_ids:
             all_campaign_ids.append("default")
@@ -366,14 +366,29 @@ TOOLS = [
         "is_local": True,
         "function": {
             "name": "campaign_quest",
-            "description": "Add, update, or complete a quest in the campaign log.",
+            "description": "Add, update, or complete (or fail) a quest in the campaign log. To remove a quest entirely, use campaign_quest_delete instead.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "name":        {"type": "string", "description": "Quest name"},
                     "description": {"type": "string", "description": "Brief quest description or current objective"},
-                    "status":      {"type": "string", "description": "active, completed, or failed"},
+                    "status":      {"type": "string", "description": "active | completed | failed (use campaign_quest_delete to remove entirely)"},
                     "urgent":      {"type": "boolean", "description": "Mark as urgent/time-sensitive"}
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "is_local": True,
+        "function": {
+            "name": "campaign_quest_delete",
+            "description": "Delete a quest from the campaign log. This removes the quest entirely.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Quest name to delete"}
                 },
                 "required": ["name"]
             }
@@ -576,6 +591,14 @@ def execute(function_name, arguments, config):
         existing = next((q for q in quests if q["name"].lower() == name.lower()), None)
         status = arguments.get("status", "active")
 
+        # Validate status value
+        if status not in ("active", "completed", "failed"):
+            return (
+                f"Invalid status '{status}'. Use 'active', 'completed', or 'failed'. "
+                "To remove a quest entirely, use campaign_quest_delete.",
+                False
+            )
+
         if existing:
             if "description" in arguments: existing["description"] = arguments["description"]
             if "status" in arguments:      existing["status"]      = arguments["status"]
@@ -594,6 +617,20 @@ def execute(function_name, arguments, config):
         campaign["quests"] = quests
         _save_campaign(campaign)
         return msg, True
+
+    elif function_name == "campaign_quest_delete":
+        name = arguments.get("name", "").strip()
+        if not name:
+            return "Quest name is required.", False
+        campaign = _load_campaign()
+        quests = campaign.get("quests", [])
+        original_count = len(quests)
+        quests = [q for q in quests if q["name"].lower() != name.lower()]
+        if len(quests) == original_count:
+            return f"No quest named '{name}' found.", False
+        campaign["quests"] = quests
+        _save_campaign(campaign)
+        return f"🗑️ Quest deleted: **{name}**", True
 
     elif function_name == "campaign_set_mode":
         mode = arguments.get("mode", "in_character")

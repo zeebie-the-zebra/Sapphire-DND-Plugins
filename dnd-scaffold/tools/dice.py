@@ -5,6 +5,7 @@ Supports:
   - Standard notation: 2d6, 1d20, 4d4+3, 1d8-1
   - Named dice: d4, d6, d8, d10, d12, d20, d100 (percentile)
   - Advantage / disadvantage (roll 2d20, keep highest/lowest)
+  - Keep/drop notation: 4d6kh3 (keep highest 3), 2d20kl1 (keep lowest 1)
   - Multiple separate rolls in one call (e.g. "1d20 for attack, 2d6+3 for damage")
   - Roll history tracking via plugin state
 """
@@ -28,6 +29,7 @@ TOOLS = [
                 "make an attack roll, check a skill, roll for damage, or any game action involving "
                 "randomness. Supports standard dice notation like '1d20', '2d6+3', '4d4-1'. "
                 "Also supports multiple dice groups like '2d6+2d6+4' for combined rolls like sneak attack. "
+                "Supports keep/drop notation: '4d6kh3' keeps the highest 3 of 4d6, '2d20kl1' keeps the lowest 1. "
                 "Supports advantage/disadvantage for D&D 5e d20 rolls. "
                 "Can handle multiple rolls at once (e.g. attack roll + damage roll)."
             ),
@@ -94,8 +96,9 @@ TOOLS = [
 VALID_SIDES = {4, 6, 8, 10, 12, 20, 100}
 
 # Matches a single dice group: "2d6", "d6", "2d6+3", "d8-1"
+# Also captures optional keep/drop: "4d6kh3", "2d20kl1"
 _DICE_GROUP_RE = re.compile(
-    r'^(\d+)?d(\d+)([+-]\d+)?$',
+    r'^(\d+)?d(\d+)([+-]\d+)?(kh\d+|kl\d+|kh|kl)?$',
     re.IGNORECASE
 )
 
@@ -104,7 +107,9 @@ def _parse_notation(notation: str):
     """
     Parse dice notation like '2d6+3', '1d20', 'd8', 'd100-1'.
     Also supports multiple dice groups: '2d6+2d6+4', '1d8+1d6+3'.
-    Returns (total_count, total_sides, total_modifier, breakdown) or raises ValueError.
+    Supports keep/drop notation: '4d6kh3' (keep highest 3), '2d20kl1' (keep lowest 1).
+    Returns (total_count, total_sides, total_modifier, breakdown, keep) or raises ValueError.
+    breakdown is None for single groups; keep is a dict {mode: 'kh'|'kl', count: N} or None.
     """
     notation = notation.strip().lower().replace(' ', '')
 
@@ -115,9 +120,23 @@ def _parse_notation(notation: str):
         sides   = int(m.group(2))
         mod_str = m.group(3)
         modifier = int(mod_str) if mod_str else 0
+        keep_raw = m.group(4)  # e.g. "kh3", "kl1", "kh", "kl"
+
+        keep = None
+        if keep_raw:
+            if keep_raw in ('kh', 'kl'):
+                keep = {'mode': keep_raw, 'count': count}
+            else:
+                # e.g. "kh3" → mode='kh', count=3
+                keep = {'mode': keep_raw[:2], 'count': int(keep_raw[2:])}
+            # Validate: keep count can't exceed dice count
+            if keep['count'] > count:
+                raise ValueError(f"Cannot keep {keep['count']} dice from only {count} rolled.")
+            if keep['count'] < 1:
+                raise ValueError(f"Keep count must be at least 1.")
 
         _validate_dice(count, sides, modifier)
-        return count, sides, modifier, None
+        return count, sides, modifier, None, keep
 
     # Multi-group: split by '+' and parse each part
     # Handle both positive and negative modifiers
@@ -147,6 +166,18 @@ def _parse_notation(notation: str):
                 sides   = int(m.group(2))
                 mod_str = m.group(3)
                 modifier = int(mod_str) if mod_str else 0
+                keep_raw = m.group(4)
+
+                keep = None
+                if keep_raw:
+                    if keep_raw in ('kh', 'kl'):
+                        keep = {'mode': keep_raw, 'count': count}
+                    else:
+                        keep = {'mode': keep_raw[:2], 'count': int(keep_raw[2:])}
+                    if keep['count'] > count:
+                        raise ValueError(f"Cannot keep {keep['count']} dice from only {count} rolled in '{part}'.")
+                    if keep['count'] < 1:
+                        raise ValueError(f"Keep count must be at least 1.")
 
                 _validate_dice(count, sides, modifier)
 
@@ -159,7 +190,8 @@ def _parse_notation(notation: str):
                     'notation': part,
                     'count': count,
                     'sides': sides,
-                    'modifier': modifier
+                    'modifier': modifier,
+                    'keep': keep,
                 })
             else:
                 # It's just a number (flat modifier)
@@ -168,7 +200,7 @@ def _parse_notation(notation: str):
                 except ValueError:
                     raise ValueError(f"Invalid number in dice notation: '{part}'")
 
-        return total_count, total_sides, flat_modifier, breakdown
+        return total_count, total_sides, flat_modifier, breakdown, None
 
     # If we get here, it's invalid
     raise ValueError(f"Invalid dice notation: '{notation}'. Use format like '2d6+3' or '1d20'.")
@@ -195,9 +227,10 @@ def _format_roll_result(notation: str, label: str | None, advantage: str | None)
     """
     Perform a single roll and return a structured result dict.
     Handles advantage/disadvantage for d20 rolls.
+    Handles keep/drop notation (kh/kl).
     Handles multiple dice groups (e.g., 2d6+2d6+4).
     """
-    count, sides, modifier, breakdown = _parse_notation(notation)
+    count, sides, modifier, breakdown, keep = _parse_notation(notation)
 
     adv = (advantage or "").lower().strip()
     use_advantage    = adv == "advantage"
@@ -234,36 +267,71 @@ def _format_roll_result(notation: str, label: str | None, advantage: str | None)
         }
 
     else:
-        rolls   = _roll_dice(count, sides)
-        subtotal = sum(rolls)
-        total    = subtotal + modifier
+        rolls = _roll_dice(count, sides)
 
-        # Build readable detail string
-        if count == 1:
-            dice_str = str(rolls[0])
+        # Apply keep/drop if specified
+        kept = None
+        if keep:
+            mode = keep['mode']  # 'kh' or 'kl'
+            n = keep['count']
+            sorted_rolls = sorted(rolls, reverse=(mode == 'kh'))
+            kept = sorted_rolls[:n]
+            dropped = sorted_rolls[n:]
+            subtotal = sum(kept)
+            total = subtotal + modifier
+
+            kept_str = ', '.join(str(r) for r in kept)
+            dropped_str = ', '.join(str(r) for r in dropped) if dropped else ''
+            if dropped_str:
+                dice_str = f"[{', '.join(str(r) for r in rolls)}] → kept [{kept_str}] (dropped [{dropped_str}]) = {subtotal}"
+            else:
+                dice_str = f"[{', '.join(str(r) for r in rolls)}] → kept [{kept_str}] = {subtotal}"
+            if modifier != 0:
+                sign = "+" if modifier > 0 else ""
+                dice_str += f" {sign}{modifier}"
+
+            return {
+                "label":    label or notation,
+                "notation": notation,
+                "rolls":    rolls,
+                "kept":     kept,
+                "modifier": modifier,
+                "total":    total,
+                "detail":   dice_str,
+                "is_nat20": False,
+                "is_nat1":  False,
+            }
         else:
-            dice_str = f"[{', '.join(str(r) for r in rolls)}] = {subtotal}"
+            subtotal = sum(rolls)
+            total    = subtotal + modifier
 
-        if modifier != 0:
-            sign = "+" if modifier > 0 else ""
-            dice_str += f" {sign}{modifier}"
+            # Build readable detail string
+            if count == 1:
+                dice_str = str(rolls[0])
+            else:
+                dice_str = f"[{', '.join(str(r) for r in rolls)}] = {subtotal}"
 
-        return {
-            "label":    label or notation,
-            "notation": notation,
-            "rolls":    rolls,
-            "modifier": modifier,
-            "total":    total,
-            "detail":   dice_str,
-            "is_nat20": count == 1 and sides == 20 and rolls[0] == 20,
-            "is_nat1":  count == 1 and sides == 20 and rolls[0] == 1,
-        }
+            if modifier != 0:
+                sign = "+" if modifier > 0 else ""
+                dice_str += f" {sign}{modifier}"
+
+            return {
+                "label":    label or notation,
+                "notation": notation,
+                "rolls":    rolls,
+                "modifier": modifier,
+                "total":    total,
+                "detail":   dice_str,
+                "is_nat20": count == 1 and sides == 20 and rolls[0] == 20,
+                "is_nat1":  count == 1 and sides == 20 and rolls[0] == 1,
+            }
 
 
 def _handle_multi_group_roll(notation: str, label: str | None, breakdown: list, total_modifier: int) -> dict:
     """
     Handle multiple dice groups in one notation (e.g., 2d6+2d6+4).
     breakdown contains the dice groups, total_modifier contains flat modifiers.
+    Supports keep/drop per group (e.g., 4d6kh3+2d6).
     """
     all_rolls = []
     dice_subtotal = 0
@@ -273,17 +341,32 @@ def _handle_multi_group_roll(notation: str, label: str | None, breakdown: list, 
         count = group['count']
         sides = group['sides']
         mod = group['modifier']
+        keep = group.get('keep')
 
         rolls = _roll_dice(count, sides)
         all_rolls.extend(rolls)
 
-        group_sum = sum(rolls)
-        dice_subtotal += group_sum + mod  # Include each group's own modifier
-
-        if count == 1:
-            part_str = str(rolls[0])
+        if keep:
+            mode = keep['mode']
+            n = keep['count']
+            sorted_rolls = sorted(rolls, reverse=(mode == 'kh'))
+            kept_vals = sorted_rolls[:n]
+            dropped_vals = sorted_rolls[n:]
+            group_sum = sum(kept_vals)
+            kept_str = ', '.join(str(r) for r in kept_vals)
+            dropped_str = ', '.join(str(r) for r in dropped_vals) if dropped_vals else ''
+            if dropped_str:
+                part_str = f"[{', '.join(str(r) for r in rolls)}] → kept [{kept_str}] (dropped [{dropped_str}])"
+            else:
+                part_str = f"[{', '.join(str(r) for r in rolls)}] → kept [{kept_str}]"
         else:
-            part_str = f"[{', '.join(str(r) for r in rolls)}]"
+            group_sum = sum(rolls)
+            if count == 1:
+                part_str = str(rolls[0])
+            else:
+                part_str = f"[{', '.join(str(r) for r in rolls)}]"
+
+        dice_subtotal += group_sum + mod  # Include each group's own modifier
 
         if mod != 0:
             sign = "+" if mod > 0 else ""
@@ -336,7 +419,7 @@ def _result_to_text(r: dict) -> str:
 def _load_history():
     try:
         from core.plugin_loader import plugin_loader
-        state = plugin_loader.get_plugin_state("dnd-dice-roller")
+        state = plugin_loader.get_plugin_state("dnd-scaffold")
         return state.get("history") or []
     except Exception:
         return []
@@ -345,7 +428,7 @@ def _load_history():
 def _save_history(history: list):
     try:
         from core.plugin_loader import plugin_loader
-        state = plugin_loader.get_plugin_state("dnd-dice-roller")
+        state = plugin_loader.get_plugin_state("dnd-scaffold")
         # Keep last 50 entries
         state.save("history", history[-50:])
     except Exception:

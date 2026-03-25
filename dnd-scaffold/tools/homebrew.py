@@ -60,7 +60,7 @@ def _auto_create_character_entry(args: dict, campaign_id: str):
 
     try:
         from core.plugin_loader import plugin_loader
-        char_state = plugin_loader.get_plugin_state("dnd-characters")
+        char_state = plugin_loader.get_plugin_state("dnd-scaffold")
     except Exception:
         return
 

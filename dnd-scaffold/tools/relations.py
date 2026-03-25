@@ -56,7 +56,7 @@ def _migrate_if_needed(campaign_id: str):
 
 
 def _state():
-    return plugin_loader.get_plugin_state("dnd-npc-relations")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _load_all(config=None):

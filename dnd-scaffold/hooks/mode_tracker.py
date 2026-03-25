@@ -98,8 +98,22 @@ def pre_execute(event):
         if name:
             try:
                 from core.plugin_loader import plugin_loader
-                state = plugin_loader.get_plugin_state("dnd-characters")
-                chars = state.get("characters") or {}
+                config = getattr(event, "config", None)
+                guild_id = None
+                if config and isinstance(config, dict):
+                    guild_id = config.get("guild_id")
+                # Get campaign-scoped character store (same logic as character tools)
+                campaign_state = plugin_loader.get_plugin_state("dnd-campaign")
+                if guild_id:
+                    campaign_id = campaign_state.get(f"active_campaign:{guild_id}")
+                    if not campaign_id:
+                        campaign_id = campaign_state.get("active_campaign")
+                else:
+                    campaign_id = campaign_state.get("active_campaign")
+                if not campaign_id:
+                    campaign_id = "default"
+                char_state = plugin_loader.get_plugin_state("dnd-scaffold")
+                chars = char_state.get(f"characters:{campaign_id}") or char_state.get("characters") or {}
                 exists = any(
                     k.lower() == name.lower() or v.get("name", "").lower() == name.lower()
                     for k, v in chars.items()

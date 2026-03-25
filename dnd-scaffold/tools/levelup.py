@@ -554,7 +554,7 @@ def _get_campaign_id(config=None) -> str:
 
 def _get_state():
     from core.plugin_loader import plugin_loader
-    return plugin_loader.get_plugin_state("dnd-levelup")
+    return plugin_loader.get_plugin_state("dnd-scaffold")
 
 
 def _migrate_if_needed(campaign_id: str):

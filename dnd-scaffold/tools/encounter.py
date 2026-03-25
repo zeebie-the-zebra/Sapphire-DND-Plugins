@@ -9,6 +9,7 @@ Features:
 """
 
 import random
+import re
 
 ENABLED = True
 EMOJI = '⚔️'
@@ -21,6 +22,27 @@ AVAILABLE_FUNCTIONS = [
     'encounter_xp_budget',
     'monster_lookup',
 ]
+
+# ── Monster fuzzy matching ─────────────────────────────────────────────────────
+
+def _tokens_for(name: str) -> set:
+    """Extract searchable tokens from a monster name."""
+    # Remove parenthetical notes like "(Red)", strip punctuation, lowercase
+    name = re.sub(r'[\(\)]', '', name)
+    tokens = re.findall(r'\b\w+\b', name.lower())
+    return set(tokens)
+
+
+def _monster_fuzzy_match(query: str, monster: dict) -> bool:
+    """
+    Match query against monster name using token-based fuzzy matching.
+    Handles format differences like 'Ancient Red Dragon' matching 'Ancient Dragon (Red)'.
+    """
+    name_tokens = _tokens_for(monster["name"])
+    query_tokens = _tokens_for(query)
+    # All query tokens must be present in monster name tokens
+    return query_tokens <= name_tokens
+
 
 # ── Monster Database (CR, XP, type, environment tags) ──────────────────────────
 MONSTERS = [
@@ -1432,7 +1454,7 @@ def _award_xp(combat, config):
         try:
             from core.plugin_loader import plugin_loader
             campaign_id = _get_campaign_id(config)
-            xp_state = plugin_loader.get_plugin_state("dnd-levelup")
+            xp_state = plugin_loader.get_plugin_state("dnd-scaffold")
             xp_data_key = f"xp_data:{campaign_id}"
             xp_data = xp_state.get(xp_data_key) or {}
 
@@ -1731,9 +1753,11 @@ def execute(function_name, arguments, config):
 
     # ── monster_lookup ──
     elif function_name == "monster_lookup":
-        query = arguments.get("name", "").lower()
+        query = arguments.get("name", "")
+
+        # 1. Try exact and substring match first
         for m in MONSTERS:
-            if m["name"].lower() == query or query in m["name"].lower():
+            if m["name"].lower() == query.lower() or query.lower() in m["name"].lower():
                 attacks = "\n".join(
                     f"    • {a['name']}: {a['hit']} to hit, {a['dmg']}" +
                     (f" (range {a['range']})" if 'range' in a else "")
@@ -1748,6 +1772,26 @@ def execute(function_name, arguments, config):
                     f"Environments: {', '.join(m.get('env',[]))}\n"
                     f"Attacks:\n{attacks}"
                 ), True
+
+        # 2. Try token-based fuzzy match (handles "Ancient Red Dragon" → "Ancient Dragon (Red)")
+        for m in MONSTERS:
+            if _monster_fuzzy_match(query, m):
+                attacks = "\n".join(
+                    f"    • {a['name']}: {a['hit']} to hit, {a['dmg']}" +
+                    (f" (range {a['range']})" if 'range' in a else "")
+                    for a in m.get("attacks", [])
+                )
+                return (
+                    f"**{m['name']}**\n"
+                    f"CR {m['cr']} | {m['xp']} XP | Type: {m['type']}\n"
+                    f"HP: {m['hp']} | AC: {m['ac']} | Speed: {m.get('speed',30)}\n"
+                    f"STR {m['str']} DEX {m['dex']} CON {m['con']} "
+                    f"INT {m['int']} WIS {m['wis']} CHA {m['cha']}\n"
+                    f"Environments: {', '.join(m.get('env',[]))}\n"
+                    f"Attacks:\n{attacks}"
+                ), True
+
+        # 3. No match found
         names = ", ".join(m["name"] for m in MONSTERS)
         return f"Monster '{arguments.get('name','')}' not found. Available: {names}", False
 
