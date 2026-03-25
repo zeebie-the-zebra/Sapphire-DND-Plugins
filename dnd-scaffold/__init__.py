@@ -20,6 +20,7 @@ TOOL_MODULES = [
     "homebrew",
     "inspiration",
     "levelup",
+    "loot",
     "mystery",
     "npcs",
     "recap",

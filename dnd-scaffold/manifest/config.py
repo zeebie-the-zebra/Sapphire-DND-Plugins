@@ -95,9 +95,6 @@ TOOL_MODES = {
     "shop_sell":              ["downtime"],
     "shop_list":             ["downtime"],
 
-    # Loot & Rewards — all modes
-    "loot_generate":          ["exploration", "combat", "downtime"],
-    "loot_magic_item":        ["downtime"],
     "xp_add":               ["session"],
     "xp_get":               ["session"],
     "xp_check_all":         ["session"],
@@ -152,6 +149,10 @@ TOOL_MODES = {
     "time_set":              ["session"],
     "time_get":              ["session"],
     "time_advance":          ["session", "exploration"],
+
+    # Loot — exploration, downtime
+    "loot_generate":         ["exploration", "downtime"],
+    "loot_magic_item":       ["exploration", "downtime"],
 
     # Tables — all modes
     "table_generate_npc":    ["social", "exploration"],

@@ -1,7 +1,7 @@
 {
   "files": {
     "README.md": "sha256:caf5408ba006afcf8e137ae1b48485b71d238cb1d56cc99bf4c2b6fc9d8693fd",
-    "__init__.py": "sha256:66f136061f8e653fe25cd49830121de65de7b6340c8c92e0daee490cc2636308",
+    "__init__.py": "sha256:27f49c99de9bda99e6ac17a23a9280a3150576ed4d7e2d59b671c6fa1567510c",
     "hooks/auto_log.py": "sha256:74e4ba6e9448dbe232b921fbbcbb35e274082e1a48b6b6c0fcf19ff3c67ed166",
     "hooks/combat_hooks.py": "sha256:697081d144d4dac3909cc114d5f034a02277e8be5830354c3192b50d8cb9fb23",
     "hooks/compress.py": "sha256:fc6cb791c136813ffcd875a3dc24cb9430f1b5095ac8318289d18f9b8dd6a9c6",
@@ -13,7 +13,7 @@
     "hooks/prompt_inject.py": "sha256:a64e0dde72f56d9185f87b0a791c34952e5d7ae04ad3861e7f46515ac6bbbf21",
     "hooks/toggle.py": "sha256:75b3c1664a22bd54c03175cdbd38dc9f9e120dcb9d648c96fdbfad79a9a8f28b",
     "hooks/voice_commands.py": "sha256:3dbbe3dd4d26713171d040d661c68980af46f0c0f71d0ad9fd16f14554e44e5a",
-    "manifest/config.py": "sha256:ca8fad4982957b99a5ba223a8ec709aa6588079459261ebff757432e105b9b21",
+    "manifest/config.py": "sha256:1cbdb349d8f7652742840cf15c5b78b6db90c1a6594ac2db625889c06949a9b5",
     "mode_contexts/combat.md": "sha256:062a993f85c3535a5b0105c1b8562076992e0da101ff08056748539dd48044f2",
     "mode_contexts/downtime.md": "sha256:8c5f56df017a5c7e81c55da2464c7e09b5c64a63c450eed5f32086fd7874314c",
     "mode_contexts/exploration.md": "sha256:ed8ab3c9a4bc658df370d3dd1290ea6d440bdfd30cde2ec36ebb6661d9df58d2",
@@ -28,6 +28,7 @@
     "tools/homebrew.py": "sha256:8f5ac49cec5ca713b0ed368d7de0dc556f27e82931080be0f64c9a364cc7b74f",
     "tools/inspiration.py": "sha256:0c31ed517f4f927384c56e64f673d46ca16d5f264c7c14b880eea092acb10e8f",
     "tools/levelup.py": "sha256:ad9511b495ef801446b3d76fed32d15a67139e15a54b6e8f39b7a62e1816f579",
+    "tools/loot.py": "sha256:9b6b71fa0312e082f6afe6710d31b06edd5a583fb763dc2bfea5988ad1119d45",
     "tools/mystery.py": "sha256:dc4e2444e35af6d067b07d58babeefd5cbe4fa43222221e76d1e388dfd162ce2",
     "tools/npcs.py": "sha256:ea71f449cf904e559cfe4ecedf9ce35f42fb77c509c65d67101ca4104543db0b",
     "tools/recap.py": "sha256:449c672643137a5ce9a8310bcd5535a7f9c3ff617bda84706a69314938bc7da8",
@@ -46,5 +47,5 @@
     "tools/travel.py": "sha256:65694562c7b8249e8e9ac099e40fb2af7b8a436fca44b3aaa4c530102a4b36df",
     "tools/weather.py": "sha256:2b3e0beaa93c23ddc74242c957e12510f61001c4299eb03e70ef71deeeb8e933"
   },
-  "signature": "uH2MBcFtG1NUFDxAfJ8y8vUhuY2+tLgcRVcDl0OHbs6xF4FSgDZPZSOGRFzII25C8zQXwMGGrA6vRnRQcY0aBQ=="
+  "signature": "RUJeeB+rYpRBSGnQiu0vVpjrI/bumAPxUcPeGobemogxJyYQUjJ7Z1oa4T84n7vTM9rnbeh39V4DfkD5fYJbCA=="
 }
